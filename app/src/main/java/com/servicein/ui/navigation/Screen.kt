@@ -1,0 +1,10 @@
+package com.servicein.ui.navigation
+
+sealed class Screen(val route: String) {
+    data object SplashScreen : Screen("splash_screen")
+    data object Login : Screen("login")
+    data object Home : Screen("home")
+    data object ShopDetail : Screen("shop_detail")
+    data object History : Screen("history")
+    data object HistoryDetail : Screen("history_detail")
+}

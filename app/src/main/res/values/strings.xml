@@ -1,0 +1,17 @@
+<resources>
+    <string name="app_name">ServiceIn</string>
+    <string name="welcome">Selamat Datang!</string>
+    <string name="welcome_text">Temukan bengkel terbaik, pesan layanan home service langsung dari aplikasi, dan nikmati kemudahan tanpa harus keluar rumah.\n\nMasuk sekarang dan rasakan pengalaman servis motor yang lebih mudah, efisien, dan terpercaya!</string>
+    <string name="login_with_google">Masuk Dengan Google</string>
+    <string name="withdraw">Withdraw</string>
+    <string name="history_button">Riwayat\nPesanan</string>
+    <string name="order_summary">Rangkuman Pesanan</string>
+    <string name="subtotal">Subtotal</string>
+    <string name="download_receipt">Download Receipt</string>
+    <string name="top_up">Top Up</string>
+    <string name="profile_button_text">Profil</string>
+    <string name="recommended_shop">Bengkel Rekomendasi</string>
+    <string name="nearest_shop">Bengkel Terdekat</string>
+    <string name="order_service">Pesan Layanan</string>
+    <string name="order_from_this_shop">Pesan dari Bengkel ini</string>
+</resources>
