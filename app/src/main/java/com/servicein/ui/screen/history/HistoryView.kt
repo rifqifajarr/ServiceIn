@@ -17,17 +17,19 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
+import com.servicein.R
 import com.servicein.core.util.MapUtil
 import com.servicein.ui.component.OrderHistoryItem
 
 @Composable
 fun HistoryView(
+    modifier: Modifier = Modifier,
     viewModel: HistoryViewModel = viewModel(),
     navController: NavHostController,
-    modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
     val historyList by viewModel.historyList.collectAsState()
@@ -37,13 +39,13 @@ fun HistoryView(
     }
 
     Column(
-        Modifier
+        modifier
             .fillMaxSize()
             .padding(horizontal = 24.dp)
     ) {
         Spacer(modifier = Modifier.height(16.dp))
         Text(
-            text = "History Pesanan",
+            text = stringResource(R.string.order_history),
             style = MaterialTheme.typography.titleLarge,
         )
         Spacer(modifier = Modifier.height(24.dp))

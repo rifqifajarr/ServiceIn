@@ -25,6 +25,9 @@ import com.servicein.ui.screen.history.HistoryViewModel
 import com.servicein.ui.screen.home.HomeViewModel
 import com.servicein.ui.screen.home.ShopDetailView
 import com.servicein.ui.screen.login.LoginView
+import com.servicein.ui.screen.order.OrderLocationView
+import com.servicein.ui.screen.order.OrderTypeView
+import com.servicein.ui.screen.order.OrderViewModel
 import com.servicein.ui.screen.splashScreen.SplashScreenView
 
 class MainActivity : ComponentActivity() {
@@ -33,7 +36,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
 
         if (!Places.isInitialized()) {
-            Places.initialize(applicationContext, BuildConfig.MAPS_API_KEY)
+            Places.initialize(applicationContext, BuildConfig.DIRECTIONS_API_KEY)
         }
 
         setContent {
@@ -52,7 +55,7 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun MyApp(modifier: Modifier = Modifier, navHostController: NavHostController) {
+fun MyApp(navHostController: NavHostController) {
     NavHost(
         navController = navHostController,
         startDestination = Screen.SplashScreen.route
@@ -72,7 +75,7 @@ fun MyApp(modifier: Modifier = Modifier, navHostController: NavHostController) {
                 navHostController.getBackStackEntry(Screen.Home.route)
             }
             val viewModel: HomeViewModel = viewModel(parentEntry)
-            ShopDetailView(viewModel = viewModel)
+            ShopDetailView(navController = navHostController, viewModel = viewModel)
         }
         composable(Screen.History.route) {
             val viewModel: HistoryViewModel = viewModel()
@@ -84,6 +87,25 @@ fun MyApp(modifier: Modifier = Modifier, navHostController: NavHostController) {
             }
             val viewModel: HistoryViewModel = viewModel(parentEntry)
             HistoryDetailView(viewModel = viewModel)
+        }
+        composable(Screen.OrderType.route+"/{shopId}") { backStackEntry ->
+            val viewModel: OrderViewModel = viewModel()
+            OrderTypeView(
+                navController = navHostController,
+                viewModel = viewModel,
+                shopId = backStackEntry.arguments?.getInt("shopId") ?: 0
+            )
+        }
+        composable(Screen.OrderLocation.route+"/{shopId}") { backStackEntry ->
+            val parentEntry = remember(backStackEntry) {
+                navHostController.getBackStackEntry(Screen.OrderType.route+"/{shopId}")
+            }
+            val viewModel: OrderViewModel = viewModel(parentEntry)
+            OrderLocationView(
+                viewModel = viewModel,
+                navController = navHostController,
+                shopId = backStackEntry.arguments?.getInt("shopId") ?: 0
+            )
         }
     }
 }

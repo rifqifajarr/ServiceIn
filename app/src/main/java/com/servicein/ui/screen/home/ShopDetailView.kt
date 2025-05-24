@@ -36,6 +36,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavHostController
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.model.CameraPosition
@@ -51,8 +52,9 @@ import com.servicein.core.util.MapUtil
 
 @Composable
 fun ShopDetailView(
+    modifier: Modifier = Modifier,
     viewModel: HomeViewModel = viewModel(),
-    modifier: Modifier = Modifier
+    navController: NavHostController,
 ) {
     val context = LocalContext.current
 
@@ -124,7 +126,8 @@ fun ShopDetailView(
                 .weight(1f)
         ) {
             Marker(
-                state = markerState
+                state = markerState,
+                icon = MapUtil.rememberCustomMarkerIcon(context, R.drawable.shop_marker)
             )
         }
         Box(
@@ -166,7 +169,9 @@ fun ShopDetailView(
                 )
                 Spacer(Modifier.height(24.dp))
                 Button(
-                    onClick = {  },
+                    onClick = {
+                        navController.navigate("order_type/${shop?.id}")
+                    },
                     shape = RoundedCornerShape(12.dp),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = MaterialTheme.colorScheme.primary,

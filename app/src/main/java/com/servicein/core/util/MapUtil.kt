@@ -1,10 +1,18 @@
 package com.servicein.core.util
 
 import android.content.Context
+import android.graphics.Canvas
 import android.location.Address
 import android.location.Geocoder
 import android.os.Build
 import android.util.Log
+import androidx.annotation.DrawableRes
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
+import androidx.core.content.ContextCompat
+import androidx.core.graphics.createBitmap
+import com.google.android.gms.maps.model.BitmapDescriptor
+import com.google.android.gms.maps.model.BitmapDescriptorFactory
 import com.google.android.gms.maps.model.LatLng
 import java.io.IOException
 import java.util.Locale
@@ -161,6 +169,21 @@ object MapUtil {
         }
 
         return poly
+    }
+
+    @Composable
+    fun rememberCustomMarkerIcon(context: Context, @DrawableRes resId: Int): BitmapDescriptor {
+        val bitmap = remember(resId) {
+            val drawable = ContextCompat.getDrawable(context, resId)
+            val width = 82
+            val height = 100
+            val bitmap = createBitmap(width, height)
+            val canvas = Canvas(bitmap)
+            drawable?.setBounds(0, 0, width, height)
+            drawable?.draw(canvas)
+            BitmapDescriptorFactory.fromBitmap(bitmap)
+        }
+        return bitmap
     }
 
 }

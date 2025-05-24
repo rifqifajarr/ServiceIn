@@ -14,4 +14,24 @@
     <string name="nearest_shop">Bengkel Terdekat</string>
     <string name="order_service">Pesan Layanan</string>
     <string name="order_from_this_shop">Pesan dari Bengkel ini</string>
+    <string name="order_history">History Pesanan</string>
+    <string name="order_type">Jenis Pesanan</string>
+    <string name="emergency_order_desc">Butuh bantuan segera? Motor mogok di jalan? Teknisi akan langsung menuju lokasi Anda sesegera mungkin.</string>
+    <string name="routine_service_desc">Layanan berkala untuk menjaga performa motor Anda tetap optimal. Cocok untuk perawatan standar seperti ganti oli.</string>
+    <string name="light_repair_desc">Untuk masalah ringan seperti lampu mati, rantai longgar, atau kendala kecil lainnya yang bisa diselesaikan di tempat.</string>
+    <string name="schedule_order">Jadwalkan Pesanan</string>
+    <string name="order_location">Lokasi Pesanan</string>
+    <string name="change_location">Ubah Lokasi</string>
+    <string name="confirm_location">Konfirmasi Lokasi</string>
+    <string name="loading_address">Mencari alamat…</string>
+    <string name="need_location_permission">Izin lokasi dibutuhkan untuk menampilkan lokasi.</string>
+    <string name="loading_location">Mencari lokasi…</string>
+    <string name="confirm_order">Konfirmasi Pesanan</string>
+    <string name="cancel">Batal</string>
+    <string name="price_est">Estimasi Biaya</string>
+    <string name="transport_fee">Biaya Transportasi</string>
+    <string name="app_fee">Fee Aplikasi</string>
+    <string name="current_balance">Saldo Sekarang</string>
+    <string name="new_balance">Sisa Saldo</string>
+    <string name="balance_insufficient">Saldo Anda Kurang</string>
 </resources>
