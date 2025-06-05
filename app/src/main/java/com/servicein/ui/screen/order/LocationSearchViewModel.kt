@@ -11,15 +11,24 @@ import com.google.android.libraries.places.api.model.AutocompleteSessionToken
 import com.google.android.libraries.places.api.model.Place
 import com.google.android.libraries.places.api.net.FetchPlaceRequest
 import com.google.android.libraries.places.api.net.FindAutocompletePredictionsRequest
+import com.google.android.libraries.places.api.net.PlacesClient
 
 class LocationSearchViewModel() : ViewModel() {
     private val _searchResults = mutableStateListOf<AutocompletePrediction>()
     val searchResults: List<AutocompletePrediction> = _searchResults
 
     private var sessionToken: AutocompleteSessionToken = AutocompleteSessionToken.newInstance()
+    private var placesClient: PlacesClient? = null
+
+    private fun getPlacesClient(context: Context): PlacesClient {
+        if (placesClient == null) {
+            placesClient = Places.createClient(context)
+        }
+        return placesClient!!
+    }
 
     fun searchPlaces(context: Context, query: String) {
-        val placesClient = Places.createClient(context)
+        val client = getPlacesClient(context)
 
         val request = FindAutocompletePredictionsRequest.builder()
             .setSessionToken(sessionToken)
@@ -27,7 +36,7 @@ class LocationSearchViewModel() : ViewModel() {
             .setCountries("id")
             .build()
 
-        placesClient.findAutocompletePredictions(request)
+        client.findAutocompletePredictions(request)
             .addOnSuccessListener { response ->
                 _searchResults.clear()
                 _searchResults.addAll(response.autocompletePredictions)
@@ -43,15 +52,29 @@ class LocationSearchViewModel() : ViewModel() {
         placeId: String,
         onLatLngRetrieved: (LatLng) -> Unit
     ) {
-        val placesClient = Places.createClient(context)
+        val client = getPlacesClient(context)
         val request = FetchPlaceRequest.builder(placeId, listOf(Place.Field.LOCATION)).build()
 
-        placesClient.fetchPlace(request)
+        client.fetchPlace(request)
             .addOnSuccessListener { response ->
                 response.place.location?.let { onLatLngRetrieved(it) }
+                // Regenerate session token setelah fetch place untuk menghindari reuse
+                sessionToken = AutocompleteSessionToken.newInstance()
             }
             .addOnFailureListener { exception ->
                 Log.e("LocationSearchViewModel", "Error fetching place details", exception)
+                // Regenerate session token meskipun gagal
+                sessionToken = AutocompleteSessionToken.newInstance()
             }
+    }
+
+    fun clearSearchResults() {
+        _searchResults.clear()
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        // Shutdown PlacesClient saat ViewModel di-destroy
+        placesClient = null
     }
 }

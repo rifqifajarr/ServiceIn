@@ -1,10 +1,9 @@
 package com.servicein.domain.model
 
-import com.google.android.gms.maps.model.LatLng
-
 data class Shop(
-    val id: Int,
-    val shopName: String,
-    val address: LatLng,
-    val rating: Int,
+    val id: String = "",
+    val shopName: String = "",
+    val latitude: Double = 0.0,
+    val longitude: Double = 0.0,
+    val rating: Double = 0.0,
 )

@@ -2,15 +2,26 @@ package com.servicein.ui.screen.history
 
 import android.util.Log
 import androidx.lifecycle.ViewModel
-import com.google.android.gms.maps.model.LatLng
+import androidx.lifecycle.viewModelScope
 import com.servicein.core.util.OrderStatus
-import com.servicein.core.util.OrderType
+import com.servicein.data.repository.OrderRepository
 import com.servicein.domain.model.Order
+import com.servicein.domain.preference.AppPreferencesManager
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import java.time.LocalDateTime
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
+import javax.inject.Inject
 
-class HistoryViewModel(): ViewModel() {
+@HiltViewModel
+class HistoryViewModel @Inject constructor (
+    private val orderRepository: OrderRepository,
+    private val appPreferencesManager: AppPreferencesManager,
+): ViewModel() {
+    private val _isLoading = MutableStateFlow(false)
+    val isLoading: StateFlow<Boolean> = _isLoading
+
     private val _historyList = MutableStateFlow<List<Order>>(emptyList())
     val historyList: StateFlow<List<Order>> = _historyList
 
@@ -23,63 +34,22 @@ class HistoryViewModel(): ViewModel() {
     }
 
     fun getHistoryList() {
-        _historyList.value = listOf(
-            Order(
-                orderType = OrderType.LIGHT_SERVICE,
-                customerName = "John Doe",
-                address = LatLng(37.7749, -122.4194),
-                dateTime = LocalDateTime.now(),
-                value = 100000,
-                orderStatus = OrderStatus.COMPLETED
-            ),
-            Order(
-                orderType = OrderType.ROUTINE_SERVICE,
-                customerName = "Jane Smith",
-                address = LatLng(34.8890, -122.4194),
-                dateTime = LocalDateTime.now(),
-                value = 150000,
-                orderStatus = OrderStatus.COMPLETED
-            ),
-            Order(
-                orderType = OrderType.EMERGENCY_SERVICE,
-                customerName = "Bob Johnson",
-                address = LatLng(37.7749, -122.4194),
-                dateTime = LocalDateTime.now(),
-                value = 200000,
-                orderStatus = OrderStatus.COMPLETED
-            ),
-            Order(
-                orderType = OrderType.LIGHT_SERVICE,
-                customerName = "John Doe",
-                address = LatLng(37.7749, -122.4194),
-                dateTime = LocalDateTime.now(),
-                value = 100000,
-                orderStatus = OrderStatus.REJECTED
-            ),
-            Order(
-                orderType = OrderType.ROUTINE_SERVICE,
-                customerName = "Jane Smith",
-                address = LatLng(34.8890, -122.4194),
-                dateTime = LocalDateTime.now(),
-                value = 150000,
-                orderStatus = OrderStatus.COMPLETED
-            ),
-            Order(
-                orderType = OrderType.EMERGENCY_SERVICE,
-                customerName = "Bob Johnson",
-                address = LatLng(37.7749, -122.4194),
-                dateTime = LocalDateTime.now(),
-                value = 200000,
-                orderStatus = OrderStatus.COMPLETED
-            ),
-            Order(
-                orderType = OrderType.LIGHT_SERVICE,
-                customerName = "John Doe",
-                address = LatLng(37.7749, -122.4194),
-                dateTime = LocalDateTime.now(),
-                value = 100000,
-                orderStatus = OrderStatus.REJECTED
-            ),
-        )
+        _isLoading.value = true
+        viewModelScope.launch {
+            orderRepository.getOrdersByCustomerIdAndStatus(
+                appPreferencesManager.customerId.first(),
+                listOf(OrderStatus.COMPLETED, OrderStatus.REJECTED)
+            ).fold(
+                onSuccess = {
+                    _historyList.value = it
+                    Log.d("HistoryViewModel", "History list: $it")
+                    _isLoading.value = false
+                },
+                onFailure = {
+                    Log.e("HistoryViewModel", "Error getting history list", it)
+                    _isLoading.value = false
+                }
+            )
+        }
     }
 }

@@ -35,11 +35,12 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.model.CameraPosition
+import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.LatLngBounds
 import com.google.maps.android.compose.GoogleMap
 import com.google.maps.android.compose.MapProperties
@@ -49,17 +50,19 @@ import com.google.maps.android.compose.MarkerState
 import com.google.maps.android.compose.rememberCameraPositionState
 import com.servicein.R
 import com.servicein.core.util.MapUtil
+import com.servicein.ui.navigation.Screen
 
 @Composable
 fun ShopDetailView(
     modifier: Modifier = Modifier,
-    viewModel: HomeViewModel = viewModel(),
+    viewModel: HomeViewModel = hiltViewModel(),
     navController: NavHostController,
 ) {
     val context = LocalContext.current
 
     val shop by viewModel.selectedShop.collectAsState()
-    val markerState = remember { MarkerState(position = shop?.address!!) }
+    val shopLocation = LatLng(shop?.latitude ?: 0.0, shop?.longitude ?: 0.0)
+    val markerState = remember { MarkerState(position = shopLocation) }
 
     val fusedLocationClient = remember { LocationServices.getFusedLocationProviderClient(context) }
     val hasLocationPermission by viewModel.hasLocationPermission.collectAsState()
@@ -97,7 +100,7 @@ fun ShopDetailView(
         userLocation?.let {
             cameraPositionState.position = CameraPosition.fromLatLngZoom(it, 5f)
             val bounds = LatLngBounds.builder()
-                .include(shop?.address!!)
+                .include(shopLocation)
                 .include(userLocation!!)
                 .build()
 
@@ -164,13 +167,14 @@ fun ShopDetailView(
                 }
                 Spacer(Modifier.height(12.dp))
                 Text(
-                    MapUtil.getAddressFromLocation(context, shop?.address!!),
+                    MapUtil.getAddressFromLocation(context, shopLocation),
                     style = MaterialTheme.typography.bodyMedium
                 )
                 Spacer(Modifier.height(24.dp))
                 Button(
+                    enabled = shop != null,
                     onClick = {
-                        navController.navigate("order_type/${shop?.id}")
+                        navController.navigate(Screen.OrderType.createRoute(shop!!.id))
                     },
                     shape = RoundedCornerShape(12.dp),
                     colors = ButtonDefaults.buttonColors(

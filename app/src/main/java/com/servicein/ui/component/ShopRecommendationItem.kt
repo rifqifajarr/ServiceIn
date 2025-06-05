@@ -89,8 +89,9 @@ fun ShopRecommendationItem(
                     )
                 }
                 Spacer(modifier = Modifier.height(4.dp))
+                val location = LatLng(shop.latitude, shop.longitude)
                 Text(
-                    MapUtil.getAddressFromLocation(context, shop.address),
+                    MapUtil.getAddressFromLocation(context, location),
                     style = MaterialTheme.typography.bodyMedium,
                     maxLines = 3,
                     overflow = TextOverflow.Ellipsis

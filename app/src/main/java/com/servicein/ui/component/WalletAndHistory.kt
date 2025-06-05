@@ -13,7 +13,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowForwardIos
+import androidx.compose.material.icons.automirrored.filled.ArrowForwardIos
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
@@ -32,13 +32,14 @@ import com.servicein.core.util.Util
 
 @Composable
 fun WalletAndHistory(
+    modifier: Modifier = Modifier,
     onWalletButtonClick: () -> Unit,
     onHistoryButtonClick: () -> Unit,
-    modifier: Modifier = Modifier
+    wallet: Int
 ) {
     Row {
         Box(
-            modifier = Modifier
+            modifier = modifier
                 .clip(RoundedCornerShape(16.dp))
                 .height(62.dp)
                 .weight(1f)
@@ -53,11 +54,11 @@ fun WalletAndHistory(
                     .fillMaxSize()
             ) {
                 Text(
-                    Util.formatRupiah(100000),
+                    Util.formatRupiah(wallet),
                     style = MaterialTheme.typography.titleMedium,
                 )
                 Icon(
-                    imageVector = Icons.Default.ArrowForwardIos,
+                    imageVector = Icons.AutoMirrored.Filled.ArrowForwardIos,
                     contentDescription = "Arrow Forward"
                 )
             }

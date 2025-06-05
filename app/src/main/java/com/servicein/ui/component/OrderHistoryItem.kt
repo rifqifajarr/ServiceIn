@@ -39,7 +39,7 @@ import java.time.LocalDateTime
 fun OrderHistoryItem(
     orderType: OrderType,
     address: String,
-    dateTime: LocalDateTime,
+    dateTime: LocalDateTime?,
     value: Int,
     orderStatus: OrderStatus,
     modifier: Modifier = Modifier
@@ -58,7 +58,7 @@ fun OrderHistoryItem(
         ) {
             Image(
                 painter = when (orderType) {
-                    OrderType.LIGHT_SERVICE -> painterResource(R.drawable.light_repair_bike)
+                    OrderType.LIGHT_REPAIR -> painterResource(R.drawable.light_repair_bike)
                     OrderType.ROUTINE_SERVICE -> painterResource(R.drawable.routine_service_bike)
                     OrderType.EMERGENCY_SERVICE -> painterResource(R.drawable.emergency_service_bike)
                 },
@@ -73,7 +73,7 @@ fun OrderHistoryItem(
             ) {
                 Text(
                     when (orderType) {
-                        OrderType.LIGHT_SERVICE -> "Perbaikan Ringan"
+                        OrderType.LIGHT_REPAIR -> "Perbaikan Ringan"
                         OrderType.ROUTINE_SERVICE -> "Service Rutin"
                         OrderType.EMERGENCY_SERVICE -> "Perbaikan Darurat"
                     },
@@ -88,11 +88,13 @@ fun OrderHistoryItem(
                     overflow = TextOverflow.Ellipsis
                 )
                 Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    Util.formatDateTime(dateTime),
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.Bold
-                )
+                if (dateTime != null) {
+                    Text(
+                        Util.formatDateTime(dateTime),
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
                     Util.formatRupiah(value),

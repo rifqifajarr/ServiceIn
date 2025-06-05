@@ -4,5 +4,6 @@ enum class OrderStatus {
     RECEIVED,
     ACCEPTED,
     REJECTED,
+    FINISHED,
     COMPLETED,
 }

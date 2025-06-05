@@ -1,5 +1,6 @@
 package com.servicein.ui.screen.order
 
+import android.util.Log
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -13,6 +14,7 @@ import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -31,7 +33,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.maps.CameraUpdateFactory
@@ -62,8 +64,8 @@ import java.time.LocalDateTime
 fun OrderLocationView(
     modifier: Modifier = Modifier,
     navController: NavHostController,
-    viewModel: OrderViewModel = viewModel(),
-    shopId: Int,
+    viewModel: OrderViewModel = hiltViewModel(),
+    shopId: String,
 ) {
     val context = LocalContext.current
     val fusedLocationClient = remember { LocationServices.getFusedLocationProviderClient(context) }
@@ -71,19 +73,21 @@ fun OrderLocationView(
     val displayedAddress by viewModel.displayedAddress.collectAsState()
     val hasLocationPermission by viewModel.hasLocationPermission.collectAsState()
     val userLocation by viewModel.userLocation.collectAsState()
-    val selectedShop by viewModel.selectedShop.collectAsState()
-    val selectedOrder by viewModel.selectedOrder.collectAsState()
-    val selectedDate by viewModel.selectedDate.collectAsState()
-    val selectedLocation by viewModel.selectedLocation.collectAsState()
 
     val cameraPositionState = rememberCameraPositionState()
     val userMarkerState = remember { MarkerState() }
     val shopMarkerState = remember { MarkerState() }
     val routePoints by viewModel.routePolyline.collectAsState()
 
+    val isSearchingShop by viewModel.isSearchingShop.collectAsState()
     var isLocationConfirmed by remember { mutableStateOf(false) }
     var showSearchPlaceBottomSheet by remember { mutableStateOf(false) }
     val searchSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
+    val selectedShop by viewModel.selectedShop.collectAsState()
+    val selectedOrderType by viewModel.selectedOrderType.collectAsState()
+    val selectedDate by viewModel.selectedDate.collectAsState()
+    val selectedLocation by viewModel.selectedLocation.collectAsState()
 
     RequestLocationPermission(viewModel, hasLocationPermission, context, fusedLocationClient)
 
@@ -94,14 +98,39 @@ fun OrderLocationView(
             if (displayedAddress.isNullOrBlank()) {
                 viewModel.getAddressFromLocation(context, it)
             }
+            if (!isLocationConfirmed) {
+                viewModel.setSelectedLocation(it)
+            }
         }
     }
 
-    LaunchedEffect(isLocationConfirmed) {
-        viewModel.getRoutePolyline(
-            origin = userLocation ?: LatLng(0.0, 0.0),
-            selectedShop?.address ?: LatLng(0.0, 0.0)
-        )
+    LaunchedEffect(isLocationConfirmed, selectedShop, selectedLocation) {
+        if (shopId != "") {
+            viewModel.getSelectedShopData(shopId)
+        } else {
+            viewModel.pickRecommendedShop()
+        }
+
+        if (selectedShop != null && selectedLocation != null) {
+            val shopLocation = LatLng(selectedShop!!.latitude, selectedShop!!.longitude)
+            if (shopLocation.latitude != 0.0 && shopLocation.longitude != 0.0 &&
+                selectedLocation!!.latitude != 0.0 && selectedLocation!!.longitude != 0.0) {
+                cameraPositionState.position = CameraPosition.fromLatLngZoom(selectedLocation!!, 15f)
+                Log.d("OrderLocationView", "Shop: ${shopLocation.latitude}, ${shopLocation.longitude}")
+                Log.d("OrderLocationView", "Customer: ${selectedLocation!!.latitude}, ${selectedLocation!!.longitude}")
+
+                if (isLocationConfirmed) {
+                    viewModel.getRoutePolyline(
+                        origin = shopLocation,
+                        destination = selectedLocation!!
+                    )
+                }
+            }
+        }
+
+        if (selectedDate == null) {
+            viewModel.setSelectedDate(LocalDateTime.now())
+        }
     }
 
     if (showSearchPlaceBottomSheet) {
@@ -115,37 +144,62 @@ fun OrderLocationView(
         )
     }
 
-    Column(modifier.fillMaxSize()) {
-        GoogleMapView(
-            hasLocationPermission,
-            cameraPositionState,
-            userMarkerState,
-            shopMarkerState,
-            userLocation,
-            selectedShop?.address,
-            isLocationConfirmed,
-            routePoints,
-            modifier = Modifier.weight(1f)
-        )
-
-        LocationInfoSection(
-            displayedAddress,
-            isLocationConfirmed,
-            onChangeLocation = { showSearchPlaceBottomSheet = true },
-            orderType = selectedOrder,
-            date = selectedDate,
-            shop = selectedShop,
-            customerLocation = selectedLocation,
-            onConfirm = {
-                if (!isLocationConfirmed && userLocation != null) {
-                    viewModel.setSelectedLocation(userLocation!!)
-                    viewModel.getSelectedShopData(shopId)
-                    isLocationConfirmed = true
+    Column(
+        verticalArrangement = Arrangement.Center,
+        modifier = modifier.fillMaxSize()
+    ) {
+        if (isSearchingShop) {
+            CircularProgressIndicator(
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.align(Alignment.CenterHorizontally)
+            )
+        } else {
+            if (userLocation != null) {
+                val shopLocation: LatLng? = if (selectedShop != null) {
+                    LatLng(selectedShop!!.latitude, selectedShop!!.longitude)
                 } else {
-                    navController.navigate(Screen.Home.route)
+                    null
                 }
+                GoogleMapView(
+                    hasLocationPermission,
+                    cameraPositionState,
+                    userMarkerState,
+                    shopMarkerState,
+                    userLocation,
+                    shopLocation,
+                    isLocationConfirmed,
+                    routePoints,
+                    modifier = Modifier.weight(1f)
+                )
             }
-        )
+
+            LocationInfoSection(
+                displayedAddress,
+                isLocationConfirmed,
+                onChangeLocation = {
+                    if (isLocationConfirmed) {
+                        navController.navigate(Screen.Home.route) {
+                            popUpTo(Screen.OrderLocation.route)
+                        }
+                    } else {
+                        showSearchPlaceBottomSheet = true
+                    }
+                },
+                orderType = selectedOrderType,
+                date = selectedDate,
+                shop = selectedShop,
+                customerLocation = selectedLocation,
+                onConfirm = {
+                    if (!isLocationConfirmed && userLocation != null) {
+                        viewModel.setSelectedLocation(selectedLocation!!)
+                        isLocationConfirmed = true
+                    } else {
+                        // create order
+                        navController.navigate(Screen.Home.route)
+                    }
+                }
+            )
+        }
     }
 }
 
@@ -244,7 +298,9 @@ fun LocationInfoSection(
                 Text(orderType.toDisplayString(), style = MaterialTheme.typography.titleMedium)
                 Spacer(Modifier.height(12.dp))
 
-                val distance = Util.calculateDistanceInMeters(shop.address, customerLocation).toInt()
+                val shopLocation = LatLng(shop.latitude, shop.longitude)
+                val distance = Util.calculateDistanceInMeters(shopLocation, customerLocation).toInt()
+                Log.d("OrderLocationView", "distance: $distance")
                 val priceList = Util.calculatePriceBreakdown(orderType, distance)
 
                 RenderPriceBreakdown(priceList)

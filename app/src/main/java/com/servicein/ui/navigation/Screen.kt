@@ -7,6 +7,10 @@ sealed class Screen(val route: String) {
     data object ShopDetail : Screen("shop_detail")
     data object History : Screen("history")
     data object HistoryDetail : Screen("history_detail")
-    data object OrderType : Screen("order_type")
-    data object OrderLocation : Screen("order_location")
+    data object OrderType : Screen("order_type/{shopId}") {
+        fun createRoute(shopId: String?) = "order_type/$shopId"
+    }
+    data object OrderLocation : Screen("order_location/{shopId}") {
+        fun createRoute(shopId: String?) = "order_location/$shopId"
+    }
 }

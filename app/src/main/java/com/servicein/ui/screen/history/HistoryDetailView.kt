@@ -29,8 +29,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.servicein.R
 import com.servicein.core.util.OrderType
 import com.servicein.core.util.Util
@@ -38,8 +39,8 @@ import java.time.LocalDateTime
 
 @Composable
 fun HistoryDetailView(
-    viewModel: HistoryViewModel = viewModel(),
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    viewModel: HistoryViewModel = hiltViewModel(),
 ) {
     val selectedHistoryItem by viewModel.selectedHistoryItem.collectAsState()
 
@@ -67,16 +68,20 @@ fun HistoryDetailView(
             ) {
                 Text(
                     when (selectedHistoryItem?.orderType) {
-                        OrderType.LIGHT_SERVICE -> "Perbaikan Ringan"
-                        OrderType.ROUTINE_SERVICE -> "Service Rutin"
-                        OrderType.EMERGENCY_SERVICE -> "Perbaikan Darurat"
+                        OrderType.LIGHT_REPAIR.name -> "Perbaikan Ringan"
+                        OrderType.ROUTINE_SERVICE.name -> "Service Rutin"
+                        OrderType.EMERGENCY_SERVICE.name -> "Perbaikan Darurat"
                         else -> ""
                     },
                     style = MaterialTheme.typography.titleMedium
                 )
-                Text(
-                    Util.formatDateTime(selectedHistoryItem?.dateTime ?: LocalDateTime.now())
-                )
+                if (selectedHistoryItem?.dateTime != "") {
+                    Text(
+                        Util.formatDateTime(
+                            LocalDateTime.parse(selectedHistoryItem?.dateTime)
+                        )
+                    )
+                }
             }
             Spacer(modifier = Modifier.height(48.dp))
             Text(
@@ -100,6 +105,12 @@ fun HistoryDetailView(
                     )
                 }
             }
+            Spacer(modifier = Modifier.height(12.dp))
+            Text(
+                "\"${selectedHistoryItem?.review}\"",
+                style = MaterialTheme.typography.bodyLarge,
+                textAlign = TextAlign.Center,
+            )
             Spacer(modifier = Modifier.height(48.dp))
             Row(
                 verticalAlignment = Alignment.CenterVertically,
@@ -113,7 +124,7 @@ fun HistoryDetailView(
                 )
                 Spacer(modifier = Modifier.width(12.dp))
                 Text(
-                    selectedHistoryItem?.customerName ?: "",
+                    selectedHistoryItem?.technicianName ?: "",
                     style = MaterialTheme.typography.titleMedium
                 )
             }
@@ -125,54 +136,13 @@ fun HistoryDetailView(
                     .align(Alignment.Start)
             )
             Spacer(modifier = Modifier.height(24.dp))
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text(
-                        "Jasa Service",
-                        style = MaterialTheme.typography.bodyMedium
+            if (selectedHistoryItem != null) {
+                RenderPriceBreakdown(
+                    Util.calculateSubtotal(
+                        selectedHistoryItem!!.typeEnum,
+                        selectedHistoryItem!!.value
                     )
-                    Text(
-                        Util.formatRupiah(selectedHistoryItem?.value ?: 0),
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-                }
-                Spacer(Modifier.height(8.dp))
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text(
-                        "Biaya Transportasi",
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-                    Text(
-                        Util.formatRupiah(20000),
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-                }
-                Spacer(Modifier.height(8.dp))
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text(
-                        "Fee Aplikasi",
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-                    Text(
-                        Util.formatRupiah(5000),
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-                }
+                )
             }
         }
         Button(
@@ -194,5 +164,32 @@ fun HistoryDetailView(
                 fontWeight = FontWeight.Bold
             )
         }
+    }
+}
+
+@Composable
+fun RenderPriceBreakdown(
+    priceList: List<Int>,
+) {
+    val labels = listOf("Jasa Service", "Biaya Transportasi", "Fee Aplikasi")
+
+    labels.zip(priceList).forEach { (label, price) ->
+        Spacer(Modifier.height(6.dp))
+        Row(
+            horizontalArrangement = Arrangement.SpaceBetween,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text(label, style = MaterialTheme.typography.bodyLarge)
+            Text(Util.formatRupiah(price), style = MaterialTheme.typography.bodyMedium)
+        }
+    }
+
+    Spacer(Modifier.height(12.dp))
+    Row(
+        horizontalArrangement = Arrangement.SpaceBetween,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Text("Subtotal:", style = MaterialTheme.typography.titleMedium)
+        Text(Util.formatRupiah(priceList.sum()), style = MaterialTheme.typography.titleMedium)
     }
 }

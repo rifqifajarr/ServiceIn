@@ -44,7 +44,7 @@ fun OrderTypeItem(
         ) {
             Image(
                 painter = when (orderType) {
-                    OrderType.LIGHT_SERVICE -> painterResource(R.drawable.light_repair_bike)
+                    OrderType.LIGHT_REPAIR -> painterResource(R.drawable.light_repair_bike)
                     OrderType.ROUTINE_SERVICE -> painterResource(R.drawable.routine_service_bike)
                     OrderType.EMERGENCY_SERVICE -> painterResource(R.drawable.emergency_service_bike)
                 },
@@ -59,7 +59,7 @@ fun OrderTypeItem(
             ) {
                 Text(
                     when (orderType) {
-                        OrderType.LIGHT_SERVICE -> "Perbaikan Ringan"
+                        OrderType.LIGHT_REPAIR -> "Perbaikan Ringan"
                         OrderType.ROUTINE_SERVICE -> "Service Rutin"
                         OrderType.EMERGENCY_SERVICE -> "Perbaikan Darurat"
                     },
@@ -69,7 +69,7 @@ fun OrderTypeItem(
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
                     when (orderType) {
-                        OrderType.LIGHT_SERVICE -> stringResource(R.string.light_repair_desc)
+                        OrderType.LIGHT_REPAIR -> stringResource(R.string.light_repair_desc)
                         OrderType.ROUTINE_SERVICE -> stringResource(R.string.routine_service_desc)
                         OrderType.EMERGENCY_SERVICE -> stringResource(R.string.emergency_order_desc)
                     },

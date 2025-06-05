@@ -55,11 +55,34 @@ fun ScheduleOrderBottomSheet(
 ) {
     val now = LocalDateTime.now()
 
-    var selectedDate by remember { mutableStateOf(now.toLocalDate()) }
-    var selectedTime by remember { mutableStateOf(now.toLocalTime().withMinute((now.minute / 30) * 30).withSecond(0).withNano(0)) }
+    val (defaultDate, defaultTime) = remember {
+        val currentTime = now.toLocalTime()
+        val currentDate = now.toLocalDate()
+
+        when {
+            // Jika sebelum jam 8 pagi, set ke jam 8 di hari yang sama
+            currentTime.isBefore(LocalTime.of(8, 0)) -> {
+                Pair(currentDate, LocalTime.of(8, 0))
+            }
+            // Jika sudah lewat jam 5 sore, set ke jam 8 di hari esok
+            currentTime.isAfter(LocalTime.of(17, 0)) -> {
+                Pair(currentDate.plusDays(1), LocalTime.of(8, 0))
+            }
+            // Jika dalam range 8-17, gunakan waktu saat ini dibulatkan ke 30 menit terdekat
+            else -> {
+                val roundedTime = currentTime.withMinute((currentTime.minute / 30) * 30).withSecond(0).withNano(0)
+                Pair(currentDate, roundedTime)
+            }
+        }
+    }
+
+    var selectedDate by remember { mutableStateOf(defaultDate) }
+    var selectedTime by remember { mutableStateOf(defaultTime) }
 
     val availableDates = remember {
-        (0..6).map { now.toLocalDate().plusDays(it.toLong()) }
+        val currentTime = now.toLocalTime()
+        val startDay = if (currentTime.isAfter(LocalTime.of(17, 0))) 1 else 0
+        (startDay..startDay + 6).map { now.toLocalDate().plusDays(it.toLong()) }
     }
 
     val availableTimes = remember {
@@ -124,7 +147,7 @@ fun ScheduleOrderBottomSheet(
             // Date Picker Dropdown
             ExposedDropdownMenuBox(
                 expanded = isDateMenuExpanded,
-                onExpandedChange = { isDateMenuExpanded = !isDateMenuExpanded }
+                onExpandedChange = { isDateMenuExpanded = it }
             ) {
                 OutlinedTextField(
                     value = selectedDate.format(DateTimeFormatter.ofPattern("EEEE, dd MMM yyyy")),
@@ -132,7 +155,9 @@ fun ScheduleOrderBottomSheet(
                     readOnly = true,
                     label = { Text("Pilih Hari") },
                     trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = isDateMenuExpanded) },
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .menuAnchor()
                 )
                 ExposedDropdownMenu(
                     expanded = isDateMenuExpanded,
@@ -155,7 +180,7 @@ fun ScheduleOrderBottomSheet(
             // Time Picker Dropdown
             ExposedDropdownMenuBox(
                 expanded = isTimeMenuExpanded,
-                onExpandedChange = { isTimeMenuExpanded = !isTimeMenuExpanded }
+                onExpandedChange = { isTimeMenuExpanded = it }
             ) {
                 OutlinedTextField(
                     value = selectedTime.format(DateTimeFormatter.ofPattern("HH:mm")),
@@ -163,7 +188,9 @@ fun ScheduleOrderBottomSheet(
                     readOnly = true,
                     label = { Text("Pilih Jam") },
                     trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = isTimeMenuExpanded) },
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .menuAnchor()
                 )
                 ExposedDropdownMenu(
                     expanded = isTimeMenuExpanded,

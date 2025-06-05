@@ -1,20 +1,41 @@
 package com.servicein.ui.screen.home
 
+import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager
 import android.location.Location
+import android.util.Log
 import androidx.core.app.ActivityCompat
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.maps.model.LatLng
+import com.servicein.core.util.MapUtil
+import com.servicein.data.repository.CustomerRepository
+import com.servicein.data.repository.ShopRepository
+import com.servicein.domain.model.Customer
+import com.servicein.domain.model.Shop
+import com.servicein.domain.preference.AppPreferencesManager
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import android.Manifest
-import android.util.Log
-import com.servicein.domain.model.Shop
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
+import javax.inject.Inject
 
-class HomeViewModel(): ViewModel() {
+@HiltViewModel
+class HomeViewModel @Inject constructor (
+    private val shopRepository: ShopRepository,
+    private val appPreferencesManager: AppPreferencesManager,
+    private val customerRepository: CustomerRepository
+): ViewModel() {
+    private val _isShopLoading = MutableStateFlow(false)
+    val isShopLoading: StateFlow<Boolean> = _isShopLoading.asStateFlow()
+
+    private val _isUserDataLoading = MutableStateFlow(false)
+    val isUserDataLoading: StateFlow<Boolean> = _isUserDataLoading.asStateFlow()
+
     private val _userLocation = MutableStateFlow<LatLng?>(null)
     val userLocation: StateFlow<LatLng?> = _userLocation.asStateFlow()
 
@@ -24,72 +45,82 @@ class HomeViewModel(): ViewModel() {
     private val _nearestShop = MutableStateFlow<List<Shop>>(emptyList())
     val nearestShop: StateFlow<List<Shop>> = _nearestShop.asStateFlow()
 
+    private val _recommendedShop = MutableStateFlow<List<Shop>>(emptyList())
+    val recommendedShop: StateFlow<List<Shop>> = _recommendedShop.asStateFlow()
+
     private val _selectedShop = MutableStateFlow<Shop?>(null)
     val selectedShop: StateFlow<Shop?> = _selectedShop.asStateFlow()
 
-    fun getNearestShop() {
-        _nearestShop.value = listOf(
-            Shop(
-                id = 0,
-                shopName = "Bengkel Sehat Motor",
-                rating = 5,
-                address = LatLng(-6.914744, 107.609810) // Alun-Alun Bandung
-            ),
-            Shop(
-                id = 1,
-                shopName = "Cihampelas Motor Service",
-                rating = 4,
-                address = LatLng(-6.927364, 107.634575) // Cihampelas Walk
-            ),
-            Shop(
-                id = 2,
-                shopName = "BTC Auto Garage",
-                rating = 3,
-                address = LatLng(-6.886544, 107.615038) // BTC Fashion Mall
-            ),
-            Shop(
-                id = 3,
-                shopName = "Metro Motor Bandung",
-                rating = 4,
-                address = LatLng(-6.940178, 107.627847) // Metro Indah Mall
-            ),
-            Shop(
-                id = 4,
-                shopName = "Ujungberung Motor",
-                rating = 5,
-                address = LatLng(-6.869970, 107.572586) // Ujungberung
-            ),
-            Shop(
-                id = 5,
-                shopName = "Cimahi Speed Garage",
-                rating = 3,
-                address = LatLng(-6.903449, 107.573116) // Cimahi
-            ),
-            Shop(
-                id = 6,
-                shopName = "Padalarang Auto Service",
-                rating = 4,
-                address = LatLng(-6.915820, 107.742612) // Padalarang
-            ),
-            Shop(
-                id = 7,
-                shopName = "Taman Sari Motor",
-                rating = 5,
-                address = LatLng(-6.931157, 107.598206) // Taman Sari
-            ),
-            Shop(
-                id = 8,
-                shopName = "Dago Racing Garage",
-                rating = 4,
-                address = LatLng(-6.917647, 107.603201) // Dago
-            ),
-            Shop(
-                id = 9,
-                shopName = "Riau Motor Works",
-                rating = 5,
-                address = LatLng(-6.914145, 107.623409) // Jalan Riau
+    private val _customer = MutableStateFlow<Customer?>(null)
+    val customer: StateFlow<Customer?> = _customer.asStateFlow()
+
+    fun getCustomerData() {
+        _isUserDataLoading.value = true
+        viewModelScope.launch {
+            val id = appPreferencesManager.customerId.first()
+            customerRepository.getCustomerById(id).fold(
+                onSuccess = {
+                    _customer.value = it
+                    _isUserDataLoading.value = false
+                    Log.d("HomeViewModel", "Customer : $it")
+                },
+                onFailure = {
+                    Log.e("HomeViewModel", "Error fetching customer data", it)
+                    _isUserDataLoading.value = false
+                }
+            )
+        }
+    }
+
+    fun topUpWallet(amount: Int) {
+        _isUserDataLoading.value = true
+        viewModelScope.launch {
+            val shopId = appPreferencesManager.customerId.first()
+            customerRepository.addToWallet(shopId, amount).fold(
+                onSuccess = {
+                    getCustomerData()
+                    _isUserDataLoading.value = false
+                    Log.d("HomeViewModel", "Withdraw from wallet successful")
+                },
+                onFailure = {
+                    _isUserDataLoading.value = false
+                    Log.d("HomeViewModel", "Withdraw from wallet failed: ${it.message}")
+                }
+            )
+        }
+    }
+
+    private fun getRecommendedShops() {
+        val shops = _nearestShop.value
+        val sorted = shops.sortedWith(
+            compareBy(
+                { MapUtil.calculateDistanceInKm(
+                    _userLocation.value!!.latitude, _userLocation.value!!.longitude,
+                    it.latitude, it.longitude
+                ) },
+                { -it.rating }
             )
         )
+        Log.d("HomeViewModel", "Sorted Shops: $sorted")
+        _recommendedShop.value = sorted.take(3)
+    }
+
+    fun getShopsData() {
+        _isShopLoading.value = true
+        viewModelScope.launch {
+            shopRepository.getAllShops().fold(
+                onSuccess = {
+                    _nearestShop.value = it
+                    getRecommendedShops()
+                    Log.d("HomeViewModel", "Shops : $it")
+                    _isShopLoading.value = false
+                },
+                onFailure = {
+                    Log.e("HomeViewModel", "Error fetching shops", it)
+                    _isShopLoading.value = false
+                }
+            )
+        }
     }
 
     fun selectShop(shop: Shop) {

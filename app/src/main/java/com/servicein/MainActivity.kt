@@ -10,18 +10,20 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
-import androidx.navigation.compose.rememberNavController
 import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import com.google.android.libraries.places.api.Places
 import com.servicein.core.theme.ServiceInTheme
 import com.servicein.ui.navigation.Screen
-import com.servicein.ui.screen.home.HomeView
 import com.servicein.ui.screen.history.HistoryDetailView
 import com.servicein.ui.screen.history.HistoryView
 import com.servicein.ui.screen.history.HistoryViewModel
+import com.servicein.ui.screen.home.HomeView
 import com.servicein.ui.screen.home.HomeViewModel
 import com.servicein.ui.screen.home.ShopDetailView
 import com.servicein.ui.screen.login.LoginView
@@ -69,47 +71,55 @@ fun MyApp(navHostController: NavHostController) {
             LoginView(navController = navHostController)
         }
         composable(Screen.Home.route) {
-            val viewModel: HomeViewModel = viewModel()
+            val viewModel: HomeViewModel = hiltViewModel()
             HomeView(navController = navHostController, viewModel = viewModel)
         }
         composable(Screen.ShopDetail.route) { backStackEntry ->
             val parentEntry = remember(backStackEntry) {
                 navHostController.getBackStackEntry(Screen.Home.route)
             }
-            val viewModel: HomeViewModel = viewModel(parentEntry)
+            val viewModel: HomeViewModel = hiltViewModel(parentEntry)
             ShopDetailView(navController = navHostController, viewModel = viewModel)
         }
         composable(Screen.History.route) {
-            val viewModel: HistoryViewModel = viewModel()
+            val viewModel: HistoryViewModel = hiltViewModel()
             HistoryView(navController = navHostController, viewModel = viewModel)
         }
         composable(Screen.HistoryDetail.route) { backStackEntry ->
             val parentEntry = remember(backStackEntry) {
                 navHostController.getBackStackEntry(Screen.History.route)
             }
-            val viewModel: HistoryViewModel = viewModel(parentEntry)
+            val viewModel: HistoryViewModel = hiltViewModel(parentEntry)
             HistoryDetailView(viewModel = viewModel)
         }
-        composable(Screen.OrderType.route+"/{shopId}") { backStackEntry ->
-            val viewModel: OrderViewModel = viewModel()
+        composable(
+            Screen.OrderType.route,
+            arguments = listOf(navArgument("shopId") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val viewModel: OrderViewModel = hiltViewModel()
+            val shopId = backStackEntry.arguments?.getString("shopId") ?: ""
             OrderTypeView(
                 navController = navHostController,
                 viewModel = viewModel,
-                shopId = backStackEntry.arguments?.getInt("shopId") ?: 0
+                shopId = shopId
             )
         }
-        composable(Screen.OrderLocation.route+"/{shopId}") { backStackEntry ->
+        composable(
+            Screen.OrderLocation.route,
+            arguments = listOf(navArgument("shopId") { type = NavType.StringType })
+        ) { backStackEntry ->
             val parentEntry = remember(backStackEntry) {
-                navHostController.getBackStackEntry(Screen.OrderType.route+"/{shopId}")
+                navHostController.getBackStackEntry(Screen.OrderType.route)
             }
-            val viewModel: OrderViewModel = viewModel(parentEntry)
+            val viewModel: OrderViewModel = hiltViewModel(parentEntry)
+            val shopId = backStackEntry.arguments?.getString("shopId") ?: ""
             OrderLocationView(
                 viewModel = viewModel,
                 navController = navHostController,
-                shopId = backStackEntry.arguments?.getInt("shopId") ?: 0
+                shopId = shopId
             )
         }
     }
 }
 
-// TODO : get nearest shop and recommended shop, get history, create order
+// TODO : create order, show active order in home

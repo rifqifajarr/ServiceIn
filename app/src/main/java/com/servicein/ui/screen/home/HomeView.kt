@@ -5,6 +5,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -19,6 +20,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FabPosition
 import androidx.compose.material3.MaterialTheme
@@ -42,10 +44,11 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.maps.model.CameraPosition
+import com.google.android.gms.maps.model.LatLng
 import com.google.maps.android.compose.GoogleMap
 import com.google.maps.android.compose.MapProperties
 import com.google.maps.android.compose.MapUiSettings
@@ -59,13 +62,14 @@ import com.servicein.ui.component.TopUpBottomSheet
 import com.servicein.ui.component.UserInfo
 import com.servicein.ui.component.WalletAndHistory
 import com.servicein.ui.component.WalletBottomSheet
+import com.servicein.ui.navigation.Screen
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeView(
     modifier: Modifier = Modifier,
     navController: NavHostController,
-    viewModel: HomeViewModel = viewModel()
+    viewModel: HomeViewModel = hiltViewModel()
 ) {
     val context = LocalContext.current
 
@@ -81,6 +85,10 @@ fun HomeView(
     val cameraPositionState = rememberCameraPositionState()
 
     val nearestShops by viewModel.nearestShop.collectAsState()
+    val recommendedShops by viewModel.recommendedShop.collectAsState()
+    val customer by viewModel.customer.collectAsState()
+    val isShopLoading by viewModel.isShopLoading.collectAsState()
+    val isUserDataLoading by viewModel.isUserDataLoading.collectAsState()
 
     val scrollState = rememberScrollState()
 
@@ -99,7 +107,8 @@ fun HomeView(
 
     LaunchedEffect(Unit) {
         viewModel.updatePermissionStatus(context)
-        viewModel.getNearestShop()
+        viewModel.getCustomerData()
+        viewModel.getShopsData()
         if (!hasLocationPermission) {
             locationPermissionLauncher.launch(
                 arrayOf(
@@ -135,35 +144,44 @@ fun HomeView(
     }
 
     if (showWalletBottomSheet) {
-        WalletBottomSheet(
-            wallet = 100000,
-            sheetState = walletBottomSheetState,
-            onDismissRequest = {
-                showWalletBottomSheet = false
-            },
-            onTopUpButtonClick = {
-                showTopUpBottomSheet = true
-                showWalletBottomSheet = false
-            }
-        )
+        if (customer != null) {
+            WalletBottomSheet(
+                wallet = customer!!.wallet,
+                sheetState = walletBottomSheetState,
+                onDismissRequest = {
+                    showWalletBottomSheet = false
+                },
+                onTopUpButtonClick = {
+                    showTopUpBottomSheet = true
+                    showWalletBottomSheet = false
+                }
+            )
+        }
     }
 
     if (showTopUpBottomSheet) {
-        TopUpBottomSheet(
-            wallet = 100000,
-            sheetState = topUpBottomSheetState,
-            onDismissRequest = {
-                showTopUpBottomSheet = false
-            },
-            onTopUpButtonClick = {}
-        )
+        if (customer != null) {
+            TopUpBottomSheet(
+                wallet = customer!!.wallet,
+                sheetState = topUpBottomSheetState,
+                onDismissRequest = {
+                    showTopUpBottomSheet = false
+                },
+                onTopUpButtonClick = {
+                    viewModel.topUpWallet(it)
+                    showTopUpBottomSheet = false
+                }
+            )
+        }
     }
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.surface,
         floatingActionButton = {
             Button(
-                onClick = {},
+                onClick = {
+                    navController.navigate(Screen.OrderType.createRoute(""))
+                },
                 shape = RoundedCornerShape(12.dp),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = MaterialTheme.colorScheme.primary,
@@ -201,82 +219,105 @@ fun HomeView(
                     .width(158.dp)
             )
             Spacer(modifier = Modifier.height(8.dp))
-            UserInfo(username = "Rifqi Fajar", onProfileButtonClick = {
-                navController.navigate("form")
-            })
-            Spacer(modifier = Modifier.height(32.dp))
-            WalletAndHistory(
-                onWalletButtonClick = {
-                    showWalletBottomSheet = true
-                },
-                onHistoryButtonClick = {
-                    navController.navigate("history")
-                },
-                modifier = Modifier
-                    .fillMaxWidth()
-            )
-            Spacer(modifier = Modifier.height(32.dp))
-            Text(
-                text = stringResource(R.string.recommended_shop),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier
-                    .align(Alignment.Start)
-            )
-            Spacer(modifier = Modifier.height(12.dp))
-            LazyRow(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                items(nearestShops) { shop ->
-                    ShopRecommendationItem(
-                        shop = shop,
-                        onItemClick = {
-                            viewModel.selectShop(shop)
-                            navController.navigate("shop_detail")
-                        }
+            if (isUserDataLoading) {
+                CircularProgressIndicator(
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier
+                        .align(Alignment.CenterHorizontally)
+                        .padding(24.dp)
+                )
+            } else {
+                UserInfo(
+                    username = "${customer?.customerName}",
+                    onProfileButtonClick = {}
+                )
+                Spacer(modifier = Modifier.height(32.dp))
+                WalletAndHistory(
+                    wallet = customer?.wallet ?: 0,
+                    onWalletButtonClick = {
+                        showWalletBottomSheet = true
+                    },
+                    onHistoryButtonClick = {
+                        navController.navigate(Screen.History.route)
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                )
+            }
+
+            if (isShopLoading) {
+                Box(modifier = Modifier.weight(1f)) {
+                    CircularProgressIndicator(
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.align(Alignment.Center)
                     )
                 }
-            }
-            Spacer(modifier = Modifier.height(32.dp))
-            Text(
-                text = stringResource(R.string.nearest_shop),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier
-                    .align(Alignment.Start)
-            )
-            Spacer(modifier = Modifier.height(12.dp))
-            GoogleMap(
-                cameraPositionState = cameraPositionState,
-                uiSettings = MapUiSettings(
-                    mapToolbarEnabled = false,
-                    compassEnabled = false,
-                    zoomControlsEnabled = false,
-                    scrollGesturesEnabled = true,
-                    zoomGesturesEnabled = true,
-                ),
-                properties = MapProperties(
-                    isMyLocationEnabled = hasLocationPermission
-                ),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(450.dp)
-                    .clip(RoundedCornerShape(20.dp))
-            ) {
-                nearestShops.forEach { shop ->
-                    Marker(
-                        state = MarkerState(position = shop.address),
-                        icon = MapUtil.rememberCustomMarkerIcon(context, R.drawable.shop_marker),
-                        title = shop.shopName,
-                        snippet = "Rating: ${shop.rating}",
-                        onInfoWindowClick = {
-                            viewModel.selectShop(shop)
-                            navController.navigate("shop_detail")
-                        }
-                    )
+
+            } else {
+                Spacer(modifier = Modifier.height(32.dp))
+                Text(
+                    text = stringResource(R.string.recommended_shop),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier
+                        .align(Alignment.Start)
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+                LazyRow(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    items(recommendedShops) { shop ->
+                        ShopRecommendationItem(
+                            shop = shop,
+                            onItemClick = {
+                                viewModel.selectShop(shop)
+                                navController.navigate(Screen.ShopDetail.route)
+                            }
+                        )
+                    }
                 }
+                Spacer(modifier = Modifier.height(32.dp))
+                Text(
+                    text = stringResource(R.string.nearest_shop),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier
+                        .align(Alignment.Start)
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+                GoogleMap(
+                    cameraPositionState = cameraPositionState,
+                    uiSettings = MapUiSettings(
+                        mapToolbarEnabled = false,
+                        compassEnabled = false,
+                        zoomControlsEnabled = false,
+                        scrollGesturesEnabled = true,
+                        zoomGesturesEnabled = true,
+                    ),
+                    properties = MapProperties(
+                        isMyLocationEnabled = hasLocationPermission
+                    ),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(450.dp)
+                        .clip(RoundedCornerShape(20.dp))
+                ) {
+                    nearestShops.forEach { shop ->
+                        val location = LatLng(shop.latitude, shop.longitude)
+                        Marker(
+                            state = MarkerState(position = location),
+                            icon = MapUtil.rememberCustomMarkerIcon(context, R.drawable.shop_marker),
+                            title = shop.shopName,
+                            snippet = "Rating: ${shop.rating}",
+                            onInfoWindowClick = {
+                                viewModel.selectShop(shop)
+                                navController.navigate(Screen.ShopDetail.route)
+                            }
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.height(80.dp))
             }
-            Spacer(modifier = Modifier.height(80.dp))
         }
     }
 }

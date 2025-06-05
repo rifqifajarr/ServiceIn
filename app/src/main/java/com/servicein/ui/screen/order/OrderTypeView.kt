@@ -20,20 +20,21 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import com.servicein.R
 import com.servicein.core.util.OrderType
 import com.servicein.ui.component.OrderTypeItem
 import com.servicein.ui.component.ScheduleOrderBottomSheet
+import com.servicein.ui.navigation.Screen
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun OrderTypeView(
     modifier: Modifier = Modifier,
-    viewModel: OrderViewModel = viewModel(),
+    viewModel: OrderViewModel = hiltViewModel(),
     navController: NavHostController,
-    shopId: Int,
+    shopId: String?,
 ) {
     val scheduleSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     var showScheduleBottomSheet by remember { mutableStateOf(false) }
@@ -54,7 +55,11 @@ fun OrderTypeView(
             },
             onSubmitButtonClick = { time ->
                 viewModel.setSelectedDate(time)
-                navController.navigate("order_location/$shopId")
+                if (shopId == "") {
+                    navController.navigate(Screen.OrderLocation.createRoute(""))
+                } else {
+                    navController.navigate(Screen.OrderLocation.createRoute(shopId))
+                }
             }
         )
     }
@@ -75,8 +80,12 @@ fun OrderTypeView(
             modifier = Modifier
                 .fillMaxWidth()
                 .clickable {
-                    viewModel.selectOrder(OrderType.EMERGENCY_SERVICE)
-                    navController.navigate("order_location/$shopId")
+                    viewModel.selectOrderType(OrderType.EMERGENCY_SERVICE)
+                    if (shopId == "") {
+                        navController.navigate(Screen.OrderLocation.createRoute(""))
+                    } else {
+                        navController.navigate(Screen.OrderLocation.createRoute(shopId))
+                    }
                 }
         )
         Spacer(Modifier.height(12.dp))
@@ -85,17 +94,17 @@ fun OrderTypeView(
             modifier = Modifier
                 .fillMaxWidth()
                 .clickable {
-                    viewModel.selectOrder(OrderType.ROUTINE_SERVICE)
+                    viewModel.selectOrderType(OrderType.ROUTINE_SERVICE)
                     showScheduleBottomSheet = true
                 }
         )
         Spacer(Modifier.height(12.dp))
         OrderTypeItem(
-            orderType = OrderType.LIGHT_SERVICE,
+            orderType = OrderType.LIGHT_REPAIR,
             modifier = Modifier
                 .fillMaxWidth()
                 .clickable {
-                    viewModel.selectOrder(OrderType.LIGHT_SERVICE)
+                    viewModel.selectOrderType(OrderType.LIGHT_REPAIR)
                     showScheduleBottomSheet = true
                 }
         )
