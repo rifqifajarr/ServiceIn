@@ -29,7 +29,9 @@ import com.servicein.ui.screen.order.OrderLocationView
 import com.servicein.ui.screen.order.OrderTypeView
 import com.servicein.ui.screen.order.OrderViewModel
 import com.servicein.ui.screen.splashScreen.SplashScreenView
+import dagger.hilt.android.AndroidEntryPoint
 
+@AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -109,3 +111,5 @@ fun MyApp(navHostController: NavHostController) {
         }
     }
 }
+
+// TODO : get nearest shop and recommended shop, get history, create order

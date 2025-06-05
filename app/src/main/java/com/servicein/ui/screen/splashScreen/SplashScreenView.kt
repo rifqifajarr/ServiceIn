@@ -12,25 +12,31 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import com.servicein.R
-import com.servicein.ui.navigation.Screen
 import kotlinx.coroutines.delay
 
 @Composable
 fun SplashScreenView(
-    navController: NavHostController, modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    navController: NavHostController,
+    viewModel: SplashScreenViewModel = hiltViewModel()
 ) {
     LaunchedEffect(Unit) {
-        delay(2000)
-        navController.navigate(Screen.Login.route) {
-            popUpTo(Screen.SplashScreen.route)
-        }
+        delay(1000)
+        viewModel.onAppStart(
+            openAndPopUp = { route, popUp ->
+                navController.navigate(route) {
+                    popUpTo(popUp)
+                }
+            }
+        )
     }
 
     Box(
         contentAlignment = Alignment.Center,
-        modifier = Modifier
+        modifier = modifier
             .fillMaxSize()
             .background(color = MaterialTheme.colorScheme.primary)
             .padding(horizontal = 82.dp)

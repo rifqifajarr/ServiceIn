@@ -4,6 +4,9 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
+    id("com.google.gms.google-services")
+    id("com.google.devtools.ksp")
+    id("com.google.dagger.hilt.android")
 }
 
 val localProperties = Properties()
@@ -42,11 +45,11 @@ android {
         }
     }
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
     kotlinOptions {
-        jvmTarget = "11"
+        jvmTarget = "17"
     }
     buildFeatures {
         compose = true
@@ -82,4 +85,27 @@ dependencies {
     implementation(libs.logging.interceptor)
 
     implementation(libs.android.material)
+
+    implementation(platform(libs.firebase.bom))
+
+    // Firebase services
+    implementation(libs.firebase.firestore.ktx)
+    implementation(libs.firebase.auth.ktx)
+    implementation(libs.firebase.analytics)
+
+    // Google Sign-In
+    implementation(libs.play.services.auth)
+
+    // Credential Manager
+    implementation(libs.androidx.credentials)
+    implementation(libs.androidx.credentials.play.services.auth)
+    implementation(libs.googleid)
+
+    // Hilt
+    implementation(libs.hilt.android)
+    ksp(libs.hilt.compiler)
+    implementation(libs.androidx.hilt.navigation.compose)
+
+    // Data Store
+    implementation(libs.androidx.datastore.preferences)
 }

@@ -2,6 +2,7 @@
     <string name="app_name">ServiceIn</string>
     <string name="welcome">Selamat Datang!</string>
     <string name="welcome_text">Temukan bengkel terbaik, pesan layanan home service langsung dari aplikasi, dan nikmati kemudahan tanpa harus keluar rumah.\n\nMasuk sekarang dan rasakan pengalaman servis motor yang lebih mudah, efisien, dan terpercaya!</string>
+    <string name="web_client_id">993238247340-teeu40jqtrmhsf7guba7fo0rrev8292v.apps.googleusercontent.com</string>
     <string name="login_with_google">Masuk Dengan Google</string>
     <string name="withdraw">Withdraw</string>
     <string name="history_button">Riwayat\nPesanan</string>
