@@ -2,6 +2,7 @@ package com.servicein.data.repository
 
 import android.util.Log
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.ListenerRegistration
 import com.google.firebase.firestore.Query
 import com.servicein.core.util.OrderStatus
 import com.servicein.core.util.OrderType
@@ -40,6 +41,32 @@ class OrderRepository @Inject constructor(
         }
     }
 
+    fun listenToOrderById(
+        id: String,
+        onResult: (Result<Order?>) -> Unit
+    ): ListenerRegistration? {
+        if (id.isBlank()) {
+            onResult(Result.failure(IllegalArgumentException("Order ID tidak boleh kosong")))
+            return null
+        }
+
+        return ordersCollection.document(id)
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    Log.e(TAG, "Error listening to order by ID: $id", error)
+                    onResult(Result.failure(error))
+                    return@addSnapshotListener
+                }
+
+                if (snapshot != null && snapshot.exists()) {
+                    val order = snapshot.toObject(Order::class.java)?.copy(id = snapshot.id)
+                    onResult(Result.success(order))
+                } else {
+                    onResult(Result.success(null))
+                }
+            }
+    }
+
     suspend fun getOrdersByCustomerIdAndStatus(
         customerId: String,
         status: List<OrderStatus>
@@ -60,6 +87,33 @@ class OrderRepository @Inject constructor(
             Log.e(TAG, "Error getting orders for shop ID: $customerId and status: $status", e)
             Result.failure(e)
         }
+    }
+
+    fun listenToOrdersByShopId(
+        customerId: String,
+        orderStatus: List<OrderStatus>,
+        onOrdersChanged: (List<Order>) -> Unit,
+        onError: (Exception) -> Unit
+    ): ListenerRegistration {
+        return ordersCollection
+            .whereEqualTo("customerId", customerId)
+            .whereIn("orderStatus", orderStatus.map { it.name })
+            .orderBy("dateTime", Query.Direction.DESCENDING)
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    onError(error)
+                    return@addSnapshotListener
+                }
+
+                if (snapshot != null && !snapshot.isEmpty) {
+                    val orders = snapshot.documents.mapNotNull { doc ->
+                        doc.toObject(Order::class.java)?.copy(id = doc.id)
+                    }
+                    onOrdersChanged(orders)
+                } else {
+                    onOrdersChanged(emptyList())
+                }
+            }
     }
 
     suspend fun completeOrder(
@@ -89,6 +143,8 @@ class OrderRepository @Inject constructor(
     suspend fun createOrder(
         customerName: String,
         customerId: String,
+        shopId: String,
+        shopName: String,
         orderType: OrderType,
         latitude: Double,
         longitude: Double,
@@ -101,6 +157,8 @@ class OrderRepository @Inject constructor(
                 id = docRef.id,
                 customerName = customerName,
                 customerId = customerId,
+                shopId = shopId,
+                shopName = shopName,
                 orderStatus = OrderStatus.RECEIVED.name,
                 orderType = orderType.name,
                 latitude = latitude,

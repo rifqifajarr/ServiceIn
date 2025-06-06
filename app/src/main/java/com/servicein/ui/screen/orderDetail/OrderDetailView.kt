@@ -16,7 +16,6 @@ import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ChatBubble
-import androidx.compose.material.icons.filled.Navigation
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -56,9 +55,11 @@ import com.google.maps.android.compose.Polyline
 import com.google.maps.android.compose.rememberCameraPositionState
 import com.servicein.R
 import com.servicein.core.util.MapUtil
+import com.servicein.core.util.OrderStatus
 import com.servicein.core.util.OrderType
 import com.servicein.core.util.Util
 import com.servicein.ui.component.RatingReviewBottomSheet
+import com.servicein.ui.navigation.Screen
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -71,6 +72,7 @@ fun OrderDetailView(
     val context = LocalContext.current
 
     val order by viewModel.order.collectAsState()
+    val shop by viewModel.shop.collectAsState()
     val isShopDataLoading by viewModel.isShopDataLoading.collectAsState()
 
     val fusedLocationClient = remember { LocationServices.getFusedLocationProviderClient(context) }
@@ -97,7 +99,9 @@ fun OrderDetailView(
         )
     }
 
-    val customerMarkerState =
+    val orderMarkerState =
+        remember { MarkerState(position = LatLng(0.0, 0.0)) }
+    val shopMarkerState =
         remember { MarkerState(position = LatLng(0.0, 0.0)) }
 
     val locationPermissionLauncher = rememberLauncherForActivityResult(
@@ -130,24 +134,26 @@ fun OrderDetailView(
 
     LaunchedEffect(userLocation) {
         userLocation?.let {
-            cameraPositionState.position = CameraPosition.fromLatLngZoom(it, 5f)
+            cameraPositionState.position = CameraPosition.fromLatLngZoom(it, 9f)
         }
     }
 
     LaunchedEffect(isShopDataLoading) {
         if (order != null && userLocation != null) {
             val orderLatLng = LatLng(order!!.latitude, order!!.longitude)
-            customerMarkerState.position = orderLatLng
+            val shopLatLng = LatLng(shop!!.latitude, shop!!.longitude)
+            orderMarkerState.position = orderLatLng
+            shopMarkerState.position = shopLatLng
             val bounds = LatLngBounds.builder()
                 .include(orderLatLng)
-                .include(userLocation!!)
+                .include(shopLatLng)
                 .build()
 
             cameraPositionState.move(
                 CameraUpdateFactory.newLatLngBounds(bounds, 150)
             )
 
-            viewModel.getRoutePolyline(orderLatLng)
+            viewModel.getRoutePolyline(shopLatLng, orderLatLng)
         }
     }
 
@@ -170,8 +176,12 @@ fun OrderDetailView(
                 .weight(1f)
         ) {
             Marker(
-                state = customerMarkerState,
+                state = orderMarkerState,
                 icon = MapUtil.rememberCustomMarkerIcon(context, R.drawable.customer_marker)
+            )
+            Marker(
+                state = shopMarkerState,
+                icon = MapUtil.rememberCustomMarkerIcon(context, R.drawable.shop_marker)
             )
             if (routePoints.isNotEmpty()) {
                 Polyline(
@@ -220,83 +230,72 @@ fun OrderDetailView(
                         Util.formatRupiah(order?.value ?: 0),
                         style = MaterialTheme.typography.titleMedium
                     )
-                    Spacer(Modifier.height(12.dp))
-                    Text(
-                        stringResource(R.string.technicianName, order?.technicianName ?: ""),
-                        style = MaterialTheme.typography.titleMedium
-                    )
+                    if (order?.technicianName != "") {
+                        Spacer(Modifier.height(12.dp))
+                        Text(
+                            stringResource(R.string.technicianName, order?.technicianName ?: ""),
+                            style = MaterialTheme.typography.titleMedium
+                        )
+                    }
                     Spacer(Modifier.height(24.dp))
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Button(
-                            onClick = {
-                                viewModel.openGoogleMapsDirections(
-                                    context,
-                                    LatLng(order!!.latitude, order!!.longitude)
+                    if (order?.statusEnum == OrderStatus.RECEIVED) {
+                        Text(
+                            stringResource(R.string.waiting_shop),
+                            style = MaterialTheme.typography.titleMedium,
+                            textAlign = TextAlign.Center,
+                            color = MaterialTheme.colorScheme.primary,
+                        )
+                    } else {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Button(
+                                onClick = {
+                                    showRatingSheet = true
+                                },
+                                shape = RoundedCornerShape(12.dp),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = MaterialTheme.colorScheme.primary,
+                                    contentColor = Color.White
+                                ),
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .padding(horizontal = 8.dp)
+                                    .height(60.dp)
+                            ) {
+                                Text(
+                                    text = stringResource(R.string.finish_order),
+                                    textAlign = TextAlign.Center,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.Bold
                                 )
-                            },
-                            shape = RoundedCornerShape(12.dp),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = MaterialTheme.colorScheme.surface,
-                                contentColor = MaterialTheme.colorScheme.primary
-                            ),
-                            border = BorderStroke(2.dp, MaterialTheme.colorScheme.primary),
-                            modifier = Modifier
-                                .padding(horizontal = 6.dp)
-                                .height(60.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Navigation,
-                                contentDescription = "Navigation Icon",
-                            )
-                        }
-                        Button(
-                            onClick = {
-                                showRatingSheet = true
-                            },
-                            shape = RoundedCornerShape(12.dp),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = MaterialTheme.colorScheme.primary,
-                                contentColor = Color.White
-                            ),
-                            modifier = Modifier
-                                .weight(1f)
-                                .padding(horizontal = 8.dp)
-                                .height(60.dp)
-                        ) {
-                            Text(
-                                text = stringResource(R.string.finish_order),
-                                textAlign = TextAlign.Center,
-                                style = MaterialTheme.typography.bodyMedium,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
-                        Button(
-                            enabled = order != null,
-                            onClick = {
-//                                navController.navigate(
-//                                    Screen.Chat.createRoute(
-//                                        order!!.customerId,
-//                                        order!!.customerName
-//                                    )
-//                                )
-                            },
-                            shape = RoundedCornerShape(12.dp),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = MaterialTheme.colorScheme.surface,
-                                contentColor = MaterialTheme.colorScheme.primary,
-                            ),
-                            border = BorderStroke(2.dp, MaterialTheme.colorScheme.primary),
-                            modifier = Modifier
-                                .padding(horizontal = 6.dp)
-                                .height(60.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.ChatBubble,
-                                contentDescription = "Chat Icon",
-                            )
+                            }
+                            Button(
+                                enabled = order != null,
+                                onClick = {
+                                    navController.navigate(
+                                        Screen.Chat.createRoute(
+                                            order!!.shopId,
+                                            order!!.shopName
+                                        )
+                                    )
+                                },
+                                shape = RoundedCornerShape(12.dp),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = MaterialTheme.colorScheme.surface,
+                                    contentColor = MaterialTheme.colorScheme.primary,
+                                ),
+                                border = BorderStroke(2.dp, MaterialTheme.colorScheme.primary),
+                                modifier = Modifier
+                                    .padding(horizontal = 6.dp)
+                                    .height(60.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.ChatBubble,
+                                    contentDescription = "Chat Icon",
+                                )
+                            }
                         }
                     }
                 }

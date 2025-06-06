@@ -2,21 +2,21 @@ package com.servicein.ui.screen.orderDetail
 
 import android.Manifest
 import android.content.Context
-import android.content.Intent
 import android.content.pm.PackageManager
 import android.location.Location
 import android.util.Log
-import android.widget.Toast
 import androidx.core.app.ActivityCompat
-import androidx.core.net.toUri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.maps.model.LatLng
+import com.google.firebase.firestore.ListenerRegistration
 import com.servicein.BuildConfig
 import com.servicein.data.repository.OrderRepository
+import com.servicein.data.repository.ShopRepository
 import com.servicein.data.service.RouteService
 import com.servicein.domain.model.Order
+import com.servicein.domain.model.Shop
 import com.servicein.ui.navigation.Screen
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -28,9 +28,13 @@ import javax.inject.Inject
 @HiltViewModel
 class OrderDetailViewModel @Inject constructor(
     private val orderRepository: OrderRepository,
+    private val shopRepository: ShopRepository
 ) : ViewModel() {
     private val _order = MutableStateFlow<Order?>(null)
     val order: StateFlow<Order?> = _order.asStateFlow()
+
+    private val _shop = MutableStateFlow<Shop?>(null)
+    val shop: StateFlow<Shop?> = _shop.asStateFlow()
 
     private val _isShopDataLoading = MutableStateFlow(false)
     val isShopDataLoading: StateFlow<Boolean> = _isShopDataLoading.asStateFlow()
@@ -44,6 +48,8 @@ class OrderDetailViewModel @Inject constructor(
     private val _routePolyline = MutableStateFlow<List<LatLng>>(emptyList())
     val routePolyline: StateFlow<List<LatLng>> = _routePolyline.asStateFlow()
 
+    private var orderListener: ListenerRegistration? = null
+
     fun markOrderFinished(
         orderId: String,
         rating: Int,
@@ -54,9 +60,17 @@ class OrderDetailViewModel @Inject constructor(
         viewModelScope.launch {
             orderRepository.completeOrder(orderId, rating, review).fold(
                 onSuccess = {
-                    _isShopDataLoading.value = false
                     Log.d("OrderDetailViewModel", "Order marked as finished")
-                    routeAndPopUp(Screen.Home.route, Screen.OrderDetail.route)
+                    shopRepository.addToWallet(_order.value!!.shopId, _order.value!!.value).fold(
+                        onSuccess = {
+                            Log.d("OrderDetailViewModel", "Wallet updated successfully")
+                            _isShopDataLoading.value = false
+                            routeAndPopUp(Screen.Home.route, Screen.OrderDetail.route)
+                        },
+                        onFailure = {
+                            Log.d("OrderDetailViewModel", "Error updating wallet: ${it.message}")
+                        }
+                    )
                 },
                 onFailure = {
                     _isShopDataLoading.value = false
@@ -66,17 +80,17 @@ class OrderDetailViewModel @Inject constructor(
         }
     }
 
-    fun getOrderData(orderId: String) {
+    private fun getShopData(shopId: String) {
         _isShopDataLoading.value = true
         viewModelScope.launch {
-            orderRepository.getOrderById(orderId).fold(
-                onSuccess = { order ->
-                    _order.value = order
+            shopRepository.getShopById(shopId).fold(
+                onSuccess = { shop ->
+                    _shop.value = shop
                     _isShopDataLoading.value = false
-                    Log.d("OrderDetailViewModel", "Order: $order")
+                    Log.d("OrderDetailViewModel", "Shop: $shop")
                 },
                 onFailure = {
-                    _order.value = null
+                    _shop.value = null
                     _isShopDataLoading.value = false
                     Log.d("OrderDetailViewModel", "Error: ${it.message}")
                 }
@@ -84,26 +98,37 @@ class OrderDetailViewModel @Inject constructor(
         }
     }
 
-    suspend fun getRoutePolyline(destination: LatLng) {
-        if (_userLocation.value != null) {
-            _routePolyline.value = RouteService().getRoutePolyline(
-                origin = _userLocation.value!!,
-                destination = destination,
-                apiKey = BuildConfig.DIRECTIONS_API_KEY
+    fun getOrderData(orderId: String) {
+        _isShopDataLoading.value = true
+        orderListener?.remove()
+        viewModelScope.launch {
+            orderListener = orderRepository.listenToOrderById(
+                orderId,
+                onResult = { result ->
+                    result.fold(
+                        onSuccess = { order ->
+                            _order.value = order
+                            getShopData(order?.shopId ?: "")
+                            Log.d("OrderDetailViewModel", "Order: $order")
+                        },
+                        onFailure = {
+                            _order.value = null
+                            _isShopDataLoading.value = false
+                            Log.d("OrderDetailViewModel", "Error: ${it.message}")
+                        }
+                    )
+                }
             )
         }
     }
 
-    fun openGoogleMapsDirections(context: Context, destinationLatLng: LatLng) {
-        val uri =
-            "google.navigation:q=${destinationLatLng.latitude},${destinationLatLng.longitude}".toUri()
-        val intent = Intent(Intent.ACTION_VIEW, uri).apply {
-            setPackage("com.google.android.apps.maps")
-        }
-        if (intent.resolveActivity(context.packageManager) != null) {
-            context.startActivity(intent)
-        } else {
-            Toast.makeText(context, "Google Maps tidak tersedia", Toast.LENGTH_SHORT).show()
+    suspend fun getRoutePolyline(origin: LatLng, destination: LatLng) {
+        if (_userLocation.value != null) {
+            _routePolyline.value = RouteService().getRoutePolyline(
+                origin = origin,
+                destination = destination,
+                apiKey = BuildConfig.DIRECTIONS_API_KEY
+            )
         }
     }
 
@@ -148,5 +173,10 @@ class OrderDetailViewModel @Inject constructor(
 
     fun setPermissionGranted(granted: Boolean) {
         _hasLocationPermission.value = granted
+    }
+
+    override fun onCleared() {
+        orderListener?.remove()
+        super.onCleared()
     }
 }

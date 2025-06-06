@@ -20,6 +20,7 @@ import androidx.navigation.navArgument
 import com.google.android.libraries.places.api.Places
 import com.servicein.core.theme.ServiceInTheme
 import com.servicein.ui.navigation.Screen
+import com.servicein.ui.screen.chat.ChatView
 import com.servicein.ui.screen.orderDetail.OrderDetailView
 import com.servicein.ui.screen.history.HistoryDetailView
 import com.servicein.ui.screen.history.HistoryView
@@ -127,7 +128,22 @@ fun MyApp(navHostController: NavHostController) {
             val orderId = it.arguments?.getString("orderId") ?: ""
             OrderDetailView(orderId = orderId, navController = navHostController)
         }
+        composable(
+            Screen.Chat.route,
+            arguments = listOf(
+                navArgument("shopId") { type = NavType.StringType },
+                navArgument("shopName") { type = NavType.StringType },
+            ),
+        ) {
+            val shopId = it.arguments?.getString("shopId") ?: ""
+            val shopName = it.arguments?.getString("shopName") ?: ""
+            ChatView(
+                shopId = shopId,
+                shopName = shopName,
+                navController = navHostController
+            )
+        }
     }
 }
 
-// TODO : chat
+// TODO : create profile dialog and implement logout

@@ -10,6 +10,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.maps.model.LatLng
+import com.google.firebase.firestore.ListenerRegistration
 import com.servicein.core.util.MapUtil
 import com.servicein.core.util.OrderStatus
 import com.servicein.data.repository.CustomerRepository
@@ -61,6 +62,8 @@ class HomeViewModel @Inject constructor (
     private val _customer = MutableStateFlow<Customer?>(null)
     val customer: StateFlow<Customer?> = _customer.asStateFlow()
 
+    private var activeOrderListenerRegistration: ListenerRegistration? = null
+
     fun getCustomerData() {
         _isUserDataLoading.value = true
         viewModelScope.launch {
@@ -99,18 +102,19 @@ class HomeViewModel @Inject constructor (
 
     fun getActiveOrder() {
         _isShopLoading.value = true
+        activeOrderListenerRegistration?.remove()
         viewModelScope.launch {
-            orderRepository.getOrdersByCustomerIdAndStatus(
+            activeOrderListenerRegistration = orderRepository.listenToOrdersByShopId(
                 appPreferencesManager.customerId.first(),
-                listOf(OrderStatus.ACCEPTED, OrderStatus.FINISHED)
-            ).fold(
-                onSuccess = {
+                listOf(OrderStatus.RECEIVED, OrderStatus.ACCEPTED, OrderStatus.FINISHED),
+                onOrdersChanged = {
                     _activeOrder.value = it
-                    Log.d("HomeViewModel", "Active Order : $it")
                     _isShopLoading.value = false
+                    Log.d("HomeViewModel", "Active Orders: $it")
                 },
-                onFailure = {
-                    Log.e("HomeViewModel", "Error active order", it)
+                onError = {
+                    Log.e("HomeViewModel", "Error listening to active orders", it)
+                    _activeOrder.value = emptyList()
                     _isShopLoading.value = false
                 }
             )
@@ -193,5 +197,10 @@ class HomeViewModel @Inject constructor (
                     _userLocation.value = latLng
                 }
             }
+    }
+
+    override fun onCleared() {
+        activeOrderListenerRegistration?.remove()
+        super.onCleared()
     }
 }

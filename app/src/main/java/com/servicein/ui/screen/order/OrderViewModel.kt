@@ -68,6 +68,8 @@ class OrderViewModel @Inject constructor(
             orderRepository.createOrder(
                 customerName = appPreferencesManager.customerName.first(),
                 customerId = appPreferencesManager.customerId.first(),
+                shopId = _selectedShop.value!!.id,
+                shopName = _selectedShop.value!!.shopName,
                 orderType = selectedOrderType.value!!,
                 dateTime = selectedDate.value!!.toString(),
                 value = value,

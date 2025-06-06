@@ -5,5 +5,7 @@ data class Shop(
     val shopName: String = "",
     val latitude: Double = 0.0,
     val longitude: Double = 0.0,
+    val wallet: Int = 0,
     val rating: Double = 0.0,
+    val technicians: List<String> = emptyList()
 )

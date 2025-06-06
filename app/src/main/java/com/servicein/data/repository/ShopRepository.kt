@@ -31,4 +31,29 @@ class ShopRepository @Inject constructor(
             Result.failure(e)
         }
     }
+
+    suspend fun addToWallet(shopId: String, amount: Int): Result<Unit> {
+        return try {
+            val shopResult = getShopById(shopId)
+            val shop = shopResult.getOrNull() ?: return Result.failure(Exception("Shop not found"))
+
+            val updatedWallet = shop.wallet + amount
+            val updatedShop = shop.copy(wallet = updatedWallet)
+
+            updateShop(updatedShop)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    private suspend fun updateShop(shop: Shop): Result<Unit> {
+        return try {
+            shopCollection.document(shop.id)
+                .set(shop)
+                .await()
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
 }

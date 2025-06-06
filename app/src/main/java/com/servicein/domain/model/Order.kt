@@ -16,9 +16,10 @@ data class Order(
     val rating: Int = 0,
     val review: String = "",
     val shopId: String = "",
+    val shopName: String = "",
     val value: Int = 0
 ) {
-    constructor() : this("", "", "", "", "", 0.0, 0.0, "", "", 0, "", "", 0)
+    constructor() : this("", "", "", "", "", 0.0, 0.0, "", "", 0, "", "", "", 0)
 
     val statusEnum: OrderStatus
         get() = OrderStatus.valueOf(orderStatus)
