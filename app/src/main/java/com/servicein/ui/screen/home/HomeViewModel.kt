@@ -11,9 +11,12 @@ import androidx.lifecycle.viewModelScope
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.maps.model.LatLng
 import com.servicein.core.util.MapUtil
+import com.servicein.core.util.OrderStatus
 import com.servicein.data.repository.CustomerRepository
+import com.servicein.data.repository.OrderRepository
 import com.servicein.data.repository.ShopRepository
 import com.servicein.domain.model.Customer
+import com.servicein.domain.model.Order
 import com.servicein.domain.model.Shop
 import com.servicein.domain.preference.AppPreferencesManager
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -28,7 +31,8 @@ import javax.inject.Inject
 class HomeViewModel @Inject constructor (
     private val shopRepository: ShopRepository,
     private val appPreferencesManager: AppPreferencesManager,
-    private val customerRepository: CustomerRepository
+    private val customerRepository: CustomerRepository,
+    private val orderRepository: OrderRepository
 ): ViewModel() {
     private val _isShopLoading = MutableStateFlow(false)
     val isShopLoading: StateFlow<Boolean> = _isShopLoading.asStateFlow()
@@ -47,6 +51,9 @@ class HomeViewModel @Inject constructor (
 
     private val _recommendedShop = MutableStateFlow<List<Shop>>(emptyList())
     val recommendedShop: StateFlow<List<Shop>> = _recommendedShop.asStateFlow()
+
+    private val _activeOrder = MutableStateFlow<List<Order>>(emptyList())
+    val activeOrder: StateFlow<List<Order>> = _activeOrder.asStateFlow()
 
     private val _selectedShop = MutableStateFlow<Shop?>(null)
     val selectedShop: StateFlow<Shop?> = _selectedShop.asStateFlow()
@@ -85,6 +92,26 @@ class HomeViewModel @Inject constructor (
                 onFailure = {
                     _isUserDataLoading.value = false
                     Log.d("HomeViewModel", "Withdraw from wallet failed: ${it.message}")
+                }
+            )
+        }
+    }
+
+    fun getActiveOrder() {
+        _isShopLoading.value = true
+        viewModelScope.launch {
+            orderRepository.getOrdersByCustomerIdAndStatus(
+                appPreferencesManager.customerId.first(),
+                listOf(OrderStatus.ACCEPTED, OrderStatus.FINISHED)
+            ).fold(
+                onSuccess = {
+                    _activeOrder.value = it
+                    Log.d("HomeViewModel", "Active Order : $it")
+                    _isShopLoading.value = false
+                },
+                onFailure = {
+                    Log.e("HomeViewModel", "Error active order", it)
+                    _isShopLoading.value = false
                 }
             )
         }

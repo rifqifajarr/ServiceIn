@@ -35,4 +35,7 @@
     <string name="current_balance">Saldo Sekarang</string>
     <string name="new_balance">Sisa Saldo</string>
     <string name="balance_insufficient">Saldo Anda Kurang</string>
+    <string name="active_order">Pesanan Aktif</string>
+    <string name="finish_order">Selesaikan Pesanan</string>
+    <string name="technicianName">Teknisi: %1$s</string>
 </resources>

@@ -40,24 +40,6 @@ class OrderRepository @Inject constructor(
         }
     }
 
-    suspend fun getOrdersByCustomerId(customerId: String): Result<List<Order>> {
-        return try {
-            val querySnapshot = ordersCollection
-                .whereEqualTo("customerId", customerId)
-                .orderBy("dateTime", Query.Direction.DESCENDING)
-                .get()
-                .await()
-
-            val orderList = querySnapshot.documents.mapNotNull { doc ->
-                doc.toObject(Order::class.java)?.copy(id = doc.id)
-            }
-            Result.success(orderList)
-        } catch (e: Exception) {
-            Log.e(TAG, "Error getting orders by shop ID: $customerId", e)
-            Result.failure(e)
-        }
-    }
-
     suspend fun getOrdersByCustomerIdAndStatus(
         customerId: String,
         status: List<OrderStatus>
@@ -116,6 +98,7 @@ class OrderRepository @Inject constructor(
         return try {
             val docRef = ordersCollection.document()
             val newOrder = Order(
+                id = docRef.id,
                 customerName = customerName,
                 customerId = customerId,
                 orderStatus = OrderStatus.RECEIVED.name,

@@ -14,14 +14,17 @@ import com.servicein.BuildConfig
 import com.servicein.core.util.LocationPermissionHandler
 import com.servicein.core.util.MapUtil
 import com.servicein.core.util.OrderType
+import com.servicein.data.repository.OrderRepository
 import com.servicein.data.repository.ShopRepository
 import com.servicein.data.service.RouteService
 import com.servicein.domain.model.Shop
 import com.servicein.domain.preference.AppPreferencesManager
+import com.servicein.ui.navigation.Screen
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import java.time.LocalDateTime
 import javax.inject.Inject
@@ -29,7 +32,8 @@ import javax.inject.Inject
 @HiltViewModel
 class OrderViewModel @Inject constructor(
     private val shopRepository: ShopRepository,
-    private val appPreferencesManager: AppPreferencesManager
+    private val appPreferencesManager: AppPreferencesManager,
+    private val orderRepository: OrderRepository,
 ) : ViewModel(), LocationPermissionHandler {
     private val _isSearchingShop = MutableStateFlow(false)
     val isSearchingShop: StateFlow<Boolean> = _isSearchingShop.asStateFlow()
@@ -57,6 +61,30 @@ class OrderViewModel @Inject constructor(
 
     private val _routePolyline = MutableStateFlow<List<LatLng>>(emptyList())
     val routePolyline: StateFlow<List<LatLng>> = _routePolyline.asStateFlow()
+
+    fun createOrder(value: Int, routeAndPopUp: (String, String) -> Unit) {
+        _isSearchingShop.value = true
+        viewModelScope.launch {
+            orderRepository.createOrder(
+                customerName = appPreferencesManager.customerName.first(),
+                customerId = appPreferencesManager.customerId.first(),
+                orderType = selectedOrderType.value!!,
+                dateTime = selectedDate.value!!.toString(),
+                value = value,
+                latitude = selectedLocation.value!!.latitude,
+                longitude = selectedLocation.value!!.longitude
+            ).fold(
+                onSuccess = {
+                    routeAndPopUp(Screen.Home.route, Screen.OrderLocation.route)
+                    _isSearchingShop.value = false
+                },
+                onFailure = {
+                    Log.e("OrderViewModel", "error create order: $it")
+                    _isSearchingShop.value = false
+                }
+            )
+        }
+    }
 
     suspend fun getRoutePolyline(origin: LatLng, destination: LatLng) {
         if (_selectedLocation.value != null) {

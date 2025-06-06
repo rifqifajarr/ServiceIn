@@ -20,6 +20,7 @@ import androidx.navigation.navArgument
 import com.google.android.libraries.places.api.Places
 import com.servicein.core.theme.ServiceInTheme
 import com.servicein.ui.navigation.Screen
+import com.servicein.ui.screen.orderDetail.OrderDetailView
 import com.servicein.ui.screen.history.HistoryDetailView
 import com.servicein.ui.screen.history.HistoryView
 import com.servicein.ui.screen.history.HistoryViewModel
@@ -119,7 +120,14 @@ fun MyApp(navHostController: NavHostController) {
                 shopId = shopId
             )
         }
+        composable(
+            Screen.OrderDetail.route,
+            arguments = listOf(navArgument("orderId") { type = NavType.StringType })
+        ) {
+            val orderId = it.arguments?.getString("orderId") ?: ""
+            OrderDetailView(orderId = orderId, navController = navHostController)
+        }
     }
 }
 
-// TODO : create order, show active order in home
+// TODO : chat

@@ -189,13 +189,19 @@ fun OrderLocationView(
                 date = selectedDate,
                 shop = selectedShop,
                 customerLocation = selectedLocation,
-                onConfirm = {
+                onConfirm = { value ->
                     if (!isLocationConfirmed && userLocation != null) {
                         viewModel.setSelectedLocation(selectedLocation!!)
                         isLocationConfirmed = true
                     } else {
-                        // create order
-                        navController.navigate(Screen.Home.route)
+                        viewModel.createOrder(
+                            value,
+                            routeAndPopUp = { route, popUp ->
+                                navController.navigate(route) {
+                                    popUpTo(popUp)
+                                }
+                            }
+                        )
                     }
                 }
             )
@@ -248,7 +254,7 @@ fun LocationInfoSection(
     shop: Shop?,
     customerLocation: LatLng?,
     onChangeLocation: () -> Unit,
-    onConfirm: () -> Unit
+    onConfirm: (Int) -> Unit
 ) {
     Box(
         Modifier
@@ -256,6 +262,7 @@ fun LocationInfoSection(
             .wrapContentHeight()
             .padding(24.dp)
     ) {
+        var priceList: List<Int> = listOf(0)
         Column {
             Row(
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -301,15 +308,17 @@ fun LocationInfoSection(
                 val shopLocation = LatLng(shop.latitude, shop.longitude)
                 val distance = Util.calculateDistanceInMeters(shopLocation, customerLocation).toInt()
                 Log.d("OrderLocationView", "distance: $distance")
-                val priceList = Util.calculatePriceBreakdown(orderType, distance)
+                priceList = Util.calculatePriceBreakdown(orderType, distance)
 
                 RenderPriceBreakdown(priceList)
             }
 
             Spacer(Modifier.height(24.dp))
             Button(
-                onClick = onConfirm,
-                modifier = Modifier.fillMaxWidth().height(60.dp),
+                onClick = { onConfirm(priceList.sum()) },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(60.dp),
                 shape = RoundedCornerShape(12.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
             ) {

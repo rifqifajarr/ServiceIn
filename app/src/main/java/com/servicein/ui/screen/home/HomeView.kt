@@ -4,6 +4,7 @@ import android.Manifest
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -11,8 +12,10 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
@@ -57,6 +60,7 @@ import com.google.maps.android.compose.MarkerState
 import com.google.maps.android.compose.rememberCameraPositionState
 import com.servicein.R
 import com.servicein.core.util.MapUtil
+import com.servicein.ui.component.OrderListItem
 import com.servicein.ui.component.ShopRecommendationItem
 import com.servicein.ui.component.TopUpBottomSheet
 import com.servicein.ui.component.UserInfo
@@ -87,6 +91,7 @@ fun HomeView(
     val nearestShops by viewModel.nearestShop.collectAsState()
     val recommendedShops by viewModel.recommendedShop.collectAsState()
     val customer by viewModel.customer.collectAsState()
+    val activeOrder by viewModel.activeOrder.collectAsState()
     val isShopLoading by viewModel.isShopLoading.collectAsState()
     val isUserDataLoading by viewModel.isUserDataLoading.collectAsState()
 
@@ -108,6 +113,7 @@ fun HomeView(
     LaunchedEffect(Unit) {
         viewModel.updatePermissionStatus(context)
         viewModel.getCustomerData()
+        viewModel.getActiveOrder()
         viewModel.getShopsData()
         if (!hasLocationPermission) {
             locationPermissionLauncher.launch(
@@ -256,24 +262,42 @@ fun HomeView(
             } else {
                 Spacer(modifier = Modifier.height(32.dp))
                 Text(
-                    text = stringResource(R.string.recommended_shop),
+                    text = if (activeOrder.isEmpty()) stringResource(R.string.recommended_shop) else stringResource(R.string.active_order),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier
                         .align(Alignment.Start)
                 )
                 Spacer(modifier = Modifier.height(12.dp))
-                LazyRow(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    items(recommendedShops) { shop ->
-                        ShopRecommendationItem(
-                            shop = shop,
-                            onItemClick = {
-                                viewModel.selectShop(shop)
-                                navController.navigate(Screen.ShopDetail.route)
-                            }
-                        )
+                if (activeOrder.isEmpty()) {
+                    LazyRow(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        items(recommendedShops) { shop ->
+                            ShopRecommendationItem(
+                                shop = shop,
+                                onItemClick = {
+                                    viewModel.selectShop(shop)
+                                    navController.navigate(Screen.ShopDetail.route)
+                                }
+                            )
+                        }
+                    }
+                } else {
+                    LazyColumn(
+                        verticalArrangement = Arrangement.spacedBy(16.dp),
+                        modifier = Modifier.heightIn(max = 340.dp)
+                    ) {
+                        items(activeOrder) { order ->
+                            OrderListItem(
+                                order = order,
+                                modifier = Modifier
+                                    .clickable {
+                                        navController.navigate(Screen.OrderDetail.createRoute(order.id))
+                                    }
+                                    .clip(RoundedCornerShape(16.dp))
+                            )
+                        }
                     }
                 }
                 Spacer(modifier = Modifier.height(32.dp))
