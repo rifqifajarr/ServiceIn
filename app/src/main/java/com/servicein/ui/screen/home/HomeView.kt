@@ -61,6 +61,7 @@ import com.google.maps.android.compose.rememberCameraPositionState
 import com.servicein.R
 import com.servicein.core.util.MapUtil
 import com.servicein.ui.component.OrderListItem
+import com.servicein.ui.component.ProfileDialog
 import com.servicein.ui.component.ShopRecommendationItem
 import com.servicein.ui.component.TopUpBottomSheet
 import com.servicein.ui.component.UserInfo
@@ -82,6 +83,8 @@ fun HomeView(
 
     val topUpBottomSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     var showTopUpBottomSheet by remember { mutableStateOf(false) }
+
+    var showDialog by remember { mutableStateOf(false) }
 
     val fusedLocationClient = remember { LocationServices.getFusedLocationProviderClient(context) }
     val userLocation by viewModel.userLocation.collectAsState()
@@ -181,6 +184,18 @@ fun HomeView(
         }
     }
 
+    ProfileDialog(
+        isVisible = showDialog,
+        username = customer?.customerName ?: "",
+        onLogout = { viewModel.logout{ route, popUp ->
+            navController.navigate(route) {
+                popUpTo(popUp)
+            }
+        } },
+        onDismiss = { showDialog = false }
+    )
+
+
     Scaffold(
         containerColor = MaterialTheme.colorScheme.surface,
         floatingActionButton = {
@@ -235,7 +250,9 @@ fun HomeView(
             } else {
                 UserInfo(
                     username = "${customer?.customerName}",
-                    onProfileButtonClick = {}
+                    onProfileButtonClick = {
+                        showDialog = true
+                    }
                 )
                 Spacer(modifier = Modifier.height(32.dp))
                 WalletAndHistory(

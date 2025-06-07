@@ -145,5 +145,3 @@ fun MyApp(navHostController: NavHostController) {
         }
     }
 }
-
-// TODO : create profile dialog and implement logout

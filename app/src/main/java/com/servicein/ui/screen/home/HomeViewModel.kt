@@ -16,10 +16,12 @@ import com.servicein.core.util.OrderStatus
 import com.servicein.data.repository.CustomerRepository
 import com.servicein.data.repository.OrderRepository
 import com.servicein.data.repository.ShopRepository
+import com.servicein.data.service.FirebaseAccountService
 import com.servicein.domain.model.Customer
 import com.servicein.domain.model.Order
 import com.servicein.domain.model.Shop
 import com.servicein.domain.preference.AppPreferencesManager
+import com.servicein.ui.navigation.Screen
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -33,7 +35,8 @@ class HomeViewModel @Inject constructor (
     private val shopRepository: ShopRepository,
     private val appPreferencesManager: AppPreferencesManager,
     private val customerRepository: CustomerRepository,
-    private val orderRepository: OrderRepository
+    private val orderRepository: OrderRepository,
+    private val accountService: FirebaseAccountService
 ): ViewModel() {
     private val _isShopLoading = MutableStateFlow(false)
     val isShopLoading: StateFlow<Boolean> = _isShopLoading.asStateFlow()
@@ -63,6 +66,17 @@ class HomeViewModel @Inject constructor (
     val customer: StateFlow<Customer?> = _customer.asStateFlow()
 
     private var activeOrderListenerRegistration: ListenerRegistration? = null
+
+    fun logout(routeAndPopUp: (String, String) -> Unit) {
+        _isUserDataLoading.value = true
+        viewModelScope.launch {
+            accountService.signOut()
+            appPreferencesManager.clearAll()
+            _customer.value = null
+            _isUserDataLoading.value = false
+            routeAndPopUp(Screen.SplashScreen.route, Screen.Home.route)
+        }
+    }
 
     fun getCustomerData() {
         _isUserDataLoading.value = true

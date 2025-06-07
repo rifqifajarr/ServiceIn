@@ -41,4 +41,10 @@ class AppPreferencesManager @Inject constructor(
         .map { preferences ->
             preferences[CUSTOMER_NAME] ?: ""
         }
+
+    suspend fun clearAll() {
+        context.dataStore.edit { preferences ->
+            preferences.clear()
+        }
+    }
 }
