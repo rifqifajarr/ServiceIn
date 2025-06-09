@@ -39,4 +39,5 @@
     <string name="finish_order">Selesaikan Pesanan</string>
     <string name="technicianName">Teknisi: %1$s</string>
     <string name="waiting_shop">Menunggu bengkel menerima pesanan</string>
+    <string name="order_rejected">Pesanan ditolak oleh Pihak Bengkel</string>
 </resources>

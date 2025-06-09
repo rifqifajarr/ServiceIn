@@ -31,6 +31,7 @@ import com.google.android.gms.maps.model.LatLng
 import com.servicein.R
 import com.servicein.core.util.MapUtil
 import com.servicein.domain.model.Shop
+import java.text.DecimalFormat
 
 @Composable
 fun ShopRecommendationItem(
@@ -84,7 +85,7 @@ fun ShopRecommendationItem(
                     )
                     Spacer(Modifier.width(4.dp))
                     Text(
-                        "${shop.rating}",
+                        DecimalFormat("#.##").format(shop.rating),
                         style = MaterialTheme.typography.titleMedium
                     )
                 }

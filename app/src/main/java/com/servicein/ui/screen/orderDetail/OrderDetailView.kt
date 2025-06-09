@@ -245,6 +245,13 @@ fun OrderDetailView(
                             textAlign = TextAlign.Center,
                             color = MaterialTheme.colorScheme.primary,
                         )
+                    } else if (order?.statusEnum == OrderStatus.REJECTED) {
+                        Text(
+                            stringResource(R.string.order_rejected),
+                            style = MaterialTheme.typography.titleMedium,
+                            textAlign = TextAlign.Center,
+                            color = MaterialTheme.colorScheme.primary,
+                        )
                     } else {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,

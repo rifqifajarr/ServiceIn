@@ -12,6 +12,7 @@ import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.maps.model.LatLng
 import com.google.firebase.firestore.ListenerRegistration
 import com.servicein.BuildConfig
+import com.servicein.data.repository.ChatRepository
 import com.servicein.data.repository.OrderRepository
 import com.servicein.data.repository.ShopRepository
 import com.servicein.data.service.RouteService
@@ -28,7 +29,8 @@ import javax.inject.Inject
 @HiltViewModel
 class OrderDetailViewModel @Inject constructor(
     private val orderRepository: OrderRepository,
-    private val shopRepository: ShopRepository
+    private val shopRepository: ShopRepository,
+    private val chatRepository: ChatRepository
 ) : ViewModel() {
     private val _order = MutableStateFlow<Order?>(null)
     val order: StateFlow<Order?> = _order.asStateFlow()
@@ -57,6 +59,7 @@ class OrderDetailViewModel @Inject constructor(
         routeAndPopUp: (String, String) -> Unit
     ) {
         _isShopDataLoading.value = true
+        Log.i("OrderDetailViewModel", "SelectedRating: $rating")
         viewModelScope.launch {
             orderRepository.completeOrder(orderId, rating, review).fold(
                 onSuccess = {
@@ -64,8 +67,21 @@ class OrderDetailViewModel @Inject constructor(
                     shopRepository.addToWallet(_order.value!!.shopId, _order.value!!.value).fold(
                         onSuccess = {
                             Log.d("OrderDetailViewModel", "Wallet updated successfully")
-                            _isShopDataLoading.value = false
-                            routeAndPopUp(Screen.Home.route, Screen.OrderDetail.route)
+                            chatRepository.deleteChatByCustomerAndShop(
+                                _order.value!!.customerId, _order.value!!.shopId
+                            ).fold(
+                                onSuccess = {
+                                    Log.d("OrderDetailViewModel", "Chat deleted successfully")
+                                    _isShopDataLoading.value = false
+                                    routeAndPopUp(Screen.Home.route, Screen.OrderDetail.route)
+                                },
+                                onFailure = {
+                                    Log.d(
+                                        "OrderDetailViewModel",
+                                        "Error deleting chat: ${it.message}"
+                                    )
+                                }
+                            )
                         },
                         onFailure = {
                             Log.d("OrderDetailViewModel", "Error updating wallet: ${it.message}")

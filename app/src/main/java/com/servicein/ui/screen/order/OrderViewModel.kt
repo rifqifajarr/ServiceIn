@@ -14,9 +14,11 @@ import com.servicein.BuildConfig
 import com.servicein.core.util.LocationPermissionHandler
 import com.servicein.core.util.MapUtil
 import com.servicein.core.util.OrderType
+import com.servicein.data.repository.CustomerRepository
 import com.servicein.data.repository.OrderRepository
 import com.servicein.data.repository.ShopRepository
 import com.servicein.data.service.RouteService
+import com.servicein.domain.model.Customer
 import com.servicein.domain.model.Shop
 import com.servicein.domain.preference.AppPreferencesManager
 import com.servicein.ui.navigation.Screen
@@ -34,6 +36,7 @@ class OrderViewModel @Inject constructor(
     private val shopRepository: ShopRepository,
     private val appPreferencesManager: AppPreferencesManager,
     private val orderRepository: OrderRepository,
+    private val customerRepository: CustomerRepository
 ) : ViewModel(), LocationPermissionHandler {
     private val _isSearchingShop = MutableStateFlow(false)
     val isSearchingShop: StateFlow<Boolean> = _isSearchingShop.asStateFlow()
@@ -62,6 +65,25 @@ class OrderViewModel @Inject constructor(
     private val _routePolyline = MutableStateFlow<List<LatLng>>(emptyList())
     val routePolyline: StateFlow<List<LatLng>> = _routePolyline.asStateFlow()
 
+    private val _customer = MutableStateFlow<Customer?>(null)
+    val customer: StateFlow<Customer?> = _customer.asStateFlow()
+
+    fun getCustomerData() {
+        _isSearchingShop.value = true
+        viewModelScope.launch {
+            customerRepository.getCustomerById(appPreferencesManager.customerId.first()).fold(
+                onSuccess = {
+                    _customer.value = it
+                    _isSearchingShop.value = false
+                },
+                onFailure = {
+                    Log.e("OrderViewModel", "error get customer: $it")
+                    _isSearchingShop.value = false
+                }
+            )
+        }
+    }
+
     fun createOrder(value: Int, routeAndPopUp: (String, String) -> Unit) {
         _isSearchingShop.value = true
         viewModelScope.launch {
@@ -77,8 +99,19 @@ class OrderViewModel @Inject constructor(
                 longitude = selectedLocation.value!!.longitude
             ).fold(
                 onSuccess = {
-                    routeAndPopUp(Screen.Home.route, Screen.OrderLocation.route)
-                    _isSearchingShop.value = false
+                    customerRepository.deductFromWallet(
+                        appPreferencesManager.customerId.first(),
+                        value
+                    ).fold(
+                        onSuccess = {
+                            routeAndPopUp(Screen.Home.route, Screen.OrderLocation.route)
+                            _isSearchingShop.value = false
+                            Log.d("OrderViewModel", "Wallet updated successfully")
+                        },
+                        onFailure = {
+                            Log.d("OrderViewModel", "Error updating wallet: ${it.message}")
+                        }
+                    )
                 },
                 onFailure = {
                     Log.e("OrderViewModel", "error create order: $it")

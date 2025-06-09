@@ -95,7 +95,7 @@ fun HistoryDetailView(
                         imageVector = Icons.Default.Star,
                         contentDescription = null,
                         tint = if (index < (selectedHistoryItem?.rating
-                                ?: 3)
+                                ?: 0)
                         ) MaterialTheme.colorScheme.secondary else Color.LightGray,
                         modifier = Modifier.size(32.dp)
                     )

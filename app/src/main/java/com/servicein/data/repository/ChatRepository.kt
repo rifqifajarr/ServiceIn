@@ -85,4 +85,26 @@ class ChatRepository @Inject constructor(
 
         awaitClose { listener.remove() }
     }
+
+    suspend fun deleteChatByCustomerAndShop(customerId: String, shopId: String): Result<Unit> {
+        return try {
+            val querySnapshot = chatCollection
+                .whereEqualTo("customerId", customerId)
+                .whereEqualTo("shopId", shopId)
+                .get()
+                .await()
+
+            if (querySnapshot.documents.isEmpty()) {
+                return Result.failure(Exception("Chat not found"))
+            }
+
+            // Asumsikan hanya ada satu chat untuk kombinasi customerId & shopId
+            val chatDoc = querySnapshot.documents.first()
+            chatDoc.reference.delete().await()
+
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
 }

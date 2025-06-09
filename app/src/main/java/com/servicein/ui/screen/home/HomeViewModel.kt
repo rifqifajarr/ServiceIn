@@ -137,17 +137,19 @@ class HomeViewModel @Inject constructor (
 
     private fun getRecommendedShops() {
         val shops = _nearestShop.value
-        val sorted = shops.sortedWith(
-            compareBy(
-                { MapUtil.calculateDistanceInKm(
-                    _userLocation.value!!.latitude, _userLocation.value!!.longitude,
-                    it.latitude, it.longitude
-                ) },
-                { -it.rating }
+        if (_userLocation.value != null) {
+            val sorted = shops.sortedWith(
+                compareBy(
+                    { MapUtil.calculateDistanceInKm(
+                        _userLocation.value!!.latitude, _userLocation.value!!.longitude,
+                        it.latitude, it.longitude
+                    ) },
+                    { -it.rating }
+                )
             )
-        )
-        Log.d("HomeViewModel", "Sorted Shops: $sorted")
-        _recommendedShop.value = sorted.take(3)
+            Log.d("HomeViewModel", "Sorted Shops: $sorted")
+            _recommendedShop.value = sorted.take(3)
+        }
     }
 
     fun getShopsData() {

@@ -73,6 +73,7 @@ fun OrderLocationView(
     val displayedAddress by viewModel.displayedAddress.collectAsState()
     val hasLocationPermission by viewModel.hasLocationPermission.collectAsState()
     val userLocation by viewModel.userLocation.collectAsState()
+    val customer by viewModel.customer.collectAsState()
 
     val cameraPositionState = rememberCameraPositionState()
     val userMarkerState = remember { MarkerState() }
@@ -90,6 +91,10 @@ fun OrderLocationView(
     val selectedLocation by viewModel.selectedLocation.collectAsState()
 
     RequestLocationPermission(viewModel, hasLocationPermission, context, fusedLocationClient)
+
+    LaunchedEffect(Unit) {
+        viewModel.getCustomerData()
+    }
 
     LaunchedEffect(userLocation) {
         userLocation?.let {
@@ -189,6 +194,7 @@ fun OrderLocationView(
                 date = selectedDate,
                 shop = selectedShop,
                 customerLocation = selectedLocation,
+                balance = customer?.wallet ?: 0,
                 onConfirm = { value ->
                     if (!isLocationConfirmed && userLocation != null) {
                         viewModel.setSelectedLocation(selectedLocation!!)
@@ -253,6 +259,7 @@ fun LocationInfoSection(
     date: LocalDateTime?,
     shop: Shop?,
     customerLocation: LatLng?,
+    balance: Int,
     onChangeLocation: () -> Unit,
     onConfirm: (Int) -> Unit
 ) {
@@ -310,11 +317,14 @@ fun LocationInfoSection(
                 Log.d("OrderLocationView", "distance: $distance")
                 priceList = Util.calculatePriceBreakdown(orderType, distance)
 
-                RenderPriceBreakdown(priceList)
+                RenderPriceBreakdown(priceList, balance)
             }
 
             Spacer(Modifier.height(24.dp))
             Button(
+                enabled = if (isConfirmed) {
+                    balance > priceList.sum()
+                } else true,
                 onClick = { onConfirm(priceList.sum()) },
                 modifier = Modifier
                     .fillMaxWidth()
@@ -334,10 +344,10 @@ fun LocationInfoSection(
 @Composable
 fun RenderPriceBreakdown(
     priceList: List<Int>,
+    balance: Int
 ) {
     val labels = listOf("Jasa Service", "Biaya Transportasi", "Fee Aplikasi")
-    val currentBalance = 200_000
-    val newBalance = currentBalance - priceList.sum()
+    val newBalance = balance - priceList.sum()
 
     labels.zip(priceList).forEach { (label, price) ->
         Spacer(Modifier.height(6.dp))
@@ -353,7 +363,7 @@ fun RenderPriceBreakdown(
     Spacer(Modifier.height(12.dp))
     Text("Subtotal: ${Util.formatRupiah(priceList.sum())}", style = MaterialTheme.typography.titleMedium)
     Spacer(Modifier.height(6.dp))
-    Text("Saldo: ${Util.formatRupiah(currentBalance)}", style = MaterialTheme.typography.titleMedium)
+    Text("Saldo: ${Util.formatRupiah(balance)}", style = MaterialTheme.typography.titleMedium)
     Spacer(Modifier.height(6.dp))
     Text(
         if (newBalance >= 0) "Sisa saldo: ${Util.formatRupiah(newBalance)}"

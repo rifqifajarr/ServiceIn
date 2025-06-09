@@ -1,5 +1,6 @@
 package com.servicein.ui.component
 
+import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -183,6 +184,7 @@ fun RatingReviewBottomSheet(
             Button(
                 onClick = {
                     if (selectedRating > 0 && !isSubmitting) {
+                        Log.i("RatingReviewBottomSheet", "SelectedRating: $selectedRating")
                         isSubmitting = true
                         onSubmitReview(selectedRating, reviewText.trim())
                     }

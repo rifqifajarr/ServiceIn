@@ -51,6 +51,7 @@ import com.google.maps.android.compose.rememberCameraPositionState
 import com.servicein.R
 import com.servicein.core.util.MapUtil
 import com.servicein.ui.navigation.Screen
+import java.text.DecimalFormat
 
 @Composable
 fun ShopDetailView(
@@ -160,7 +161,7 @@ fun ShopDetailView(
                         )
                         Spacer(Modifier.width(4.dp))
                         Text(
-                            "${shop?.rating}",
+                            DecimalFormat("#.##").format(shop?.rating ?: 0.0),
                             style = MaterialTheme.typography.titleMedium
                         )
                     }
