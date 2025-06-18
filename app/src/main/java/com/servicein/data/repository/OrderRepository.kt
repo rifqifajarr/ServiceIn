@@ -7,6 +7,7 @@ import com.google.firebase.firestore.Query
 import com.servicein.core.util.OrderStatus
 import com.servicein.core.util.OrderType
 import com.servicein.domain.model.Order
+import com.servicein.domain.repository.IOrderRepository
 import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -14,34 +15,14 @@ import javax.inject.Singleton
 @Singleton
 class OrderRepository @Inject constructor(
     firestore: FirebaseFirestore
-) {
+) : IOrderRepository {
     private val ordersCollection = firestore.collection("orders")
 
     companion object {
         private const val TAG = "OrderRepository"
     }
 
-    suspend fun getOrderById(id: String): Result<Order?> {
-        return try {
-            if (id.isBlank()) {
-                return Result.failure(IllegalArgumentException("Order ID tidak boleh kosong"))
-            }
-
-            val document = ordersCollection.document(id).get().await()
-            val order = if (document.exists()) {
-                document.toObject(Order::class.java)?.copy(id = document.id)
-            } else {
-                null
-            }
-
-            Result.success(order)
-        } catch (e: Exception) {
-            Log.e(TAG, "Error getting order by ID: $id", e)
-            Result.failure(e)
-        }
-    }
-
-    fun listenToOrderById(
+    override fun listenToOrderById(
         id: String,
         onResult: (Result<Order?>) -> Unit
     ): ListenerRegistration? {
@@ -67,7 +48,7 @@ class OrderRepository @Inject constructor(
             }
     }
 
-    suspend fun getOrdersByCustomerIdAndStatus(
+    override suspend fun getOrdersByCustomerIdAndStatus(
         customerId: String,
         status: List<OrderStatus>
     ): Result<List<Order>> {
@@ -89,7 +70,7 @@ class OrderRepository @Inject constructor(
         }
     }
 
-    fun listenToOrdersByShopId(
+    override fun listenToOrdersByCustomerId(
         customerId: String,
         orderStatus: List<OrderStatus>,
         onOrdersChanged: (List<Order>) -> Unit,
@@ -116,7 +97,7 @@ class OrderRepository @Inject constructor(
             }
     }
 
-    suspend fun completeOrder(
+    override suspend fun completeOrder(
         orderId: String,
         rating: Int,
         review: String,
@@ -140,7 +121,7 @@ class OrderRepository @Inject constructor(
         }
     }
 
-    suspend fun createOrder(
+    override suspend fun createOrder(
         customerName: String,
         customerId: String,
         shopId: String,

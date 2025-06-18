@@ -15,12 +15,12 @@ import com.servicein.core.util.LocationPermissionHandler
 import com.servicein.core.util.MapUtil
 import com.servicein.core.util.OrderType
 import com.servicein.data.repository.CustomerRepository
-import com.servicein.data.repository.OrderRepository
 import com.servicein.data.repository.ShopRepository
 import com.servicein.data.service.RouteService
 import com.servicein.domain.model.Customer
 import com.servicein.domain.model.Shop
 import com.servicein.domain.preference.AppPreferencesManager
+import com.servicein.domain.usecase.CreateOrderUseCase
 import com.servicein.ui.navigation.Screen
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -35,8 +35,8 @@ import javax.inject.Inject
 class OrderViewModel @Inject constructor(
     private val shopRepository: ShopRepository,
     private val appPreferencesManager: AppPreferencesManager,
-    private val orderRepository: OrderRepository,
-    private val customerRepository: CustomerRepository
+    private val customerRepository: CustomerRepository,
+    private val createOrderUseCase: CreateOrderUseCase
 ) : ViewModel(), LocationPermissionHandler {
     private val _isSearchingShop = MutableStateFlow(false)
     val isSearchingShop: StateFlow<Boolean> = _isSearchingShop.asStateFlow()
@@ -87,7 +87,7 @@ class OrderViewModel @Inject constructor(
     fun createOrder(value: Int, routeAndPopUp: (String, String) -> Unit) {
         _isSearchingShop.value = true
         viewModelScope.launch {
-            orderRepository.createOrder(
+            createOrderUseCase(
                 customerName = appPreferencesManager.customerName.first(),
                 customerId = appPreferencesManager.customerId.first(),
                 shopId = _selectedShop.value!!.id,
@@ -236,5 +236,9 @@ class OrderViewModel @Inject constructor(
 
     fun getAddressFromLocation(context: Context, latLng: LatLng) {
         _displayedAddress.value = MapUtil.getAddressFromLocation(context, latLng)
+    }
+
+    fun setSelectedShop(shop: Shop?) {
+        _selectedShop.value = shop
     }
 }

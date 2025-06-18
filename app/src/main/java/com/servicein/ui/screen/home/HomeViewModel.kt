@@ -118,7 +118,7 @@ class HomeViewModel @Inject constructor (
         _isShopLoading.value = true
         activeOrderListenerRegistration?.remove()
         viewModelScope.launch {
-            activeOrderListenerRegistration = orderRepository.listenToOrdersByShopId(
+            activeOrderListenerRegistration = orderRepository.listenToOrdersByCustomerId(
                 appPreferencesManager.customerId.first(),
                 listOf(OrderStatus.RECEIVED, OrderStatus.ACCEPTED, OrderStatus.FINISHED),
                 onOrdersChanged = {
