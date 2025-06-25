@@ -3,6 +3,7 @@ package com.servicein.data.repository
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.toObject
 import com.servicein.domain.model.Chat
+import com.servicein.domain.model.Message
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
@@ -58,7 +59,10 @@ class ChatRepository @Inject constructor(
 
             if (chat != null) {
                 val updatedChat = chat.copy(
-                    customerMessages = chat.customerMessages + message,
+                    messages = chat.messages + Message(
+                        text = message,
+                        senderType = "customer",
+                    ),
                 )
 
                 chatRef.set(updatedChat).await()

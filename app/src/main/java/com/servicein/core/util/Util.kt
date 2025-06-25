@@ -4,7 +4,9 @@ import android.location.Location
 import android.util.Log
 import com.google.android.gms.maps.model.LatLng
 import java.text.NumberFormat
+import java.time.Instant
 import java.time.LocalDateTime
+import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
@@ -82,5 +84,14 @@ object Util {
         OrderType.LIGHT_REPAIR -> "Perbaikan Ringan"
         OrderType.EMERGENCY_SERVICE -> "Perbaikan Darurat"
         else -> ""
+    }
+
+    fun formatTimestamp(timestamp: Long): String {
+        val localDateTime = Instant.ofEpochMilli(timestamp)
+            .atZone(ZoneId.systemDefault())
+            .toLocalDateTime()
+
+        val formatter = DateTimeFormatter.ofPattern("EE, HH:mm", Locale("id", "ID"))
+        return localDateTime.format(formatter)
     }
 }

@@ -119,10 +119,16 @@ fun HistoryDetailView(
                     modifier = Modifier.size(42.dp)
                 )
                 Spacer(modifier = Modifier.width(12.dp))
-                Text(
-                    selectedHistoryItem?.technicianName ?: "",
-                    style = MaterialTheme.typography.titleMedium
-                )
+                Column {
+                    Text(
+                        selectedHistoryItem?.technicianName ?: "",
+                        style = MaterialTheme.typography.titleMedium
+                    )
+                    Text(
+                        selectedHistoryItem?.shopName ?: "",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
             }
             Spacer(modifier = Modifier.height(48.dp))
             Text(

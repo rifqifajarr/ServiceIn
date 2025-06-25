@@ -73,7 +73,6 @@ class OrderDetailViewModel @Inject constructor(
                                 onSuccess = {
                                     Log.d("OrderDetailViewModel", "Chat deleted successfully")
                                     _isShopDataLoading.value = false
-                                    routeAndPopUp(Screen.Home.route, Screen.OrderDetail.route)
                                 },
                                 onFailure = {
                                     Log.d(
@@ -82,6 +81,7 @@ class OrderDetailViewModel @Inject constructor(
                                     )
                                 }
                             )
+                            routeAndPopUp(Screen.Home.route, Screen.OrderDetail.route)
                         },
                         onFailure = {
                             Log.d("OrderDetailViewModel", "Error updating wallet: ${it.message}")

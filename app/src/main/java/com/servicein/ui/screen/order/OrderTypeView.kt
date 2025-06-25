@@ -69,7 +69,7 @@ fun OrderTypeView(
             .fillMaxSize()
             .padding(horizontal = 24.dp)
     ) {
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(32.dp))
         Text(
             text = stringResource(R.string.order_type),
             style = MaterialTheme.typography.titleLarge,

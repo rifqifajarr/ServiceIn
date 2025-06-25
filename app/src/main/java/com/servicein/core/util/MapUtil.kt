@@ -5,7 +5,6 @@ import android.graphics.Canvas
 import android.location.Address
 import android.location.Geocoder
 import android.location.Location
-import android.os.Build
 import android.util.Log
 import androidx.annotation.DrawableRes
 import androidx.compose.runtime.Composable
@@ -19,42 +18,22 @@ import java.io.IOException
 import java.util.Locale
 
 object MapUtil {
-    fun getAddressFromLocation(
-        context: Context,
-        latLng: LatLng,
-    ): String {
+    fun getAddressFromLocation(context: Context, latLng: LatLng): String {
         val geocoder = Geocoder(context, Locale.getDefault())
-        var address = ""
-
-        try {
-            val geocodeListener = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                Geocoder.GeocodeListener { addresses ->
-                    address = processAddresses(addresses)
-                }
-            } else {
-                null
-            }
-
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && geocodeListener != null) {
-                geocoder.getFromLocation(latLng.latitude, latLng.longitude, 1, geocodeListener)
-            } else {
-                @Suppress("DEPRECATION")
-                val addresses: MutableList<Address>? =
-                    geocoder.getFromLocation(latLng.latitude, latLng.longitude, 1)
-                address = processAddresses(addresses ?: emptyList())
-            }
+        return try {
+            @Suppress("DEPRECATION")
+            val addresses = geocoder.getFromLocation(latLng.latitude, latLng.longitude, 1)
+            processAddresses(addresses ?: emptyList())
         } catch (e: IOException) {
             Log.e("FormViewModel", "Layanan geocoder tidak tersedia", e)
-            address = ("Gagal mendapatkan alamat: Layanan tidak tersedia")
+            "Gagal mendapatkan alamat: Layanan tidak tersedia"
         } catch (e: IllegalArgumentException) {
             Log.e("FormViewModel", "Koordinat tidak valid", e)
-            address = ("Gagal mendapatkan alamat: Koordinat tidak valid")
+            "Gagal mendapatkan alamat: Koordinat tidak valid"
         }
-
-        return address
     }
 
-    fun processAddresses(addresses: List<Address>): String {
+    private fun processAddresses(addresses: List<Address>): String {
         if (addresses.isNotEmpty()) {
             val address: Address = addresses[0]
             val addressParts = mutableListOf<String>()

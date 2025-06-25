@@ -1,5 +1,6 @@
 package com.servicein.ui.screen.chat
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.servicein.data.repository.ChatRepository
@@ -49,13 +50,23 @@ class ChatViewModel @Inject constructor(
     private fun observeChat(chatId: String) {
         viewModelScope.launch {
             chatRepository.getChatMessages(chatId).collect { chat ->
+                Log.d("ChatViewModel", "Received chat: ${chat?.id}, messages count: ${chat?.messages?.size}")
+
                 if (chat != null) {
                     val messages = combineMessages(chat)
+                    Log.d("ChatViewModel", "Combined messages count: ${messages.size}")
+
                     _uiState.value = _uiState.value.copy(
                         isLoading = false,
                         chat = chat,
                         messages = messages,
                         error = null
+                    )
+                } else {
+                    Log.w("ChatViewModel", "Chat is null")
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        error = "Chat not found"
                     )
                 }
             }
@@ -63,31 +74,15 @@ class ChatViewModel @Inject constructor(
     }
 
     private fun combineMessages(chat: Chat): List<ChatMessage> {
-        val allMessages = mutableListOf<ChatMessage>()
-
-        // Combine and sort messages (assuming they're in chronological order)
-        val maxSize = maxOf(chat.customerMessages.size, chat.shopMessages.size)
-
-        for (i in 0 until maxSize) {
-            if (i < chat.customerMessages.size) {
-                allMessages.add(
-                    ChatMessage(
-                        text = chat.customerMessages[i],
-                        isFromCurrentUser = true
-                    )
+        return chat.messages
+            .sortedBy { it.timestamp }
+            .map { message ->
+                ChatMessage(
+                    text = message.text,
+                    isFromCurrentUser = message.senderType == "customer",
+                    timestamp = message.timestamp
                 )
             }
-            if (i < chat.shopMessages.size) {
-                allMessages.add(
-                    ChatMessage(
-                        text = chat.shopMessages[i],
-                        isFromCurrentUser = false
-                    )
-                )
-            }
-        }
-
-        return allMessages
     }
 
     fun updateMessageText(text: String) {
