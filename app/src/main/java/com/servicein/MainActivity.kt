@@ -145,5 +145,3 @@ fun MyApp(navHostController: NavHostController) {
         }
     }
 }
-
-//TODO: sorted shops not show initially,

@@ -15,8 +15,25 @@ class CustomerRepository @Inject constructor(
 
     suspend fun createCustomer(customerId: String, customerName: String): Result<Unit> {
         return try {
-            val customer = Customer(id = customerId, customerName = customerName)
-            customerCollection.document(customerId).set(customer).await()
+            val docRef = customerCollection.document(customerId)
+            val existingDoc = docRef.get().await()
+
+            val customer = if (existingDoc.exists()) {
+                val existingCustomer = existingDoc.toObject<Customer>()
+                Customer(
+                    id = customerId,
+                    customerName = customerName.ifBlank { existingCustomer?.customerName.orEmpty() },
+                    wallet = existingCustomer?.wallet ?: 0
+                )
+            } else {
+                Customer(
+                    id = customerId,
+                    customerName = customerName,
+                    wallet = 0
+                )
+            }
+
+            docRef.set(customer).await()
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)
@@ -81,15 +98,6 @@ class CustomerRepository @Inject constructor(
             }.await()
 
             Result.success(newBalance)
-        } catch (e: Exception) {
-            Result.failure(e)
-        }
-    }
-
-    suspend fun customerExists(customerId: String): Result<Boolean> {
-        return try {
-            val document = customerCollection.document(customerId).get().await()
-            Result.success(document.exists())
         } catch (e: Exception) {
             Result.failure(e)
         }
