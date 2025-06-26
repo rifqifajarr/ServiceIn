@@ -1,4 +1,4 @@
-package com.servicein
+package com.servicein.domain
 
 import com.servicein.core.util.OrderType
 import com.servicein.domain.repository.IOrderRepository

@@ -4,6 +4,7 @@ import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.toObject
 import com.servicein.domain.model.Chat
 import com.servicein.domain.model.Message
+import com.servicein.domain.repository.IChatRepository
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
@@ -14,10 +15,10 @@ import javax.inject.Singleton
 @Singleton
 class ChatRepository @Inject constructor(
     firestore: FirebaseFirestore,
-) {
+) : IChatRepository {
     private val chatCollection = firestore.collection("chats")
 
-    suspend fun createOrGetChat(
+    override suspend fun createOrGetChat(
         shopId: String,
         customerId: String,
         shopName: String,
@@ -49,7 +50,7 @@ class ChatRepository @Inject constructor(
         }
     }
 
-    suspend fun sendMessage(
+    override suspend fun sendMessage(
         chatId: String,
         message: String,
     ): Result<Unit> {
@@ -75,7 +76,7 @@ class ChatRepository @Inject constructor(
         }
     }
 
-    fun getChatMessages(chatId: String): Flow<Chat?> = callbackFlow {
+    override fun getChatMessages(chatId: String): Flow<Chat?> = callbackFlow {
         val listener = chatCollection.document(chatId)
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
@@ -90,7 +91,7 @@ class ChatRepository @Inject constructor(
         awaitClose { listener.remove() }
     }
 
-    suspend fun deleteChatByCustomerAndShop(customerId: String, shopId: String): Result<Unit> {
+    override suspend fun deleteChatByCustomerAndShop(customerId: String, shopId: String): Result<Unit> {
         return try {
             val querySnapshot = chatCollection
                 .whereEqualTo("customerId", customerId)

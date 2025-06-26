@@ -10,33 +10,35 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.maps.model.LatLng
-import com.google.firebase.firestore.ListenerRegistration
 import com.servicein.core.util.MapUtil
-import com.servicein.core.util.OrderStatus
-import com.servicein.data.repository.CustomerRepository
-import com.servicein.data.repository.OrderRepository
-import com.servicein.data.repository.ShopRepository
-import com.servicein.data.service.FirebaseAccountService
 import com.servicein.domain.model.Customer
 import com.servicein.domain.model.Order
 import com.servicein.domain.model.Shop
-import com.servicein.domain.preference.AppPreferencesManager
+import com.servicein.domain.usecase.GetCustomerUseCase
+import com.servicein.domain.usecase.GetOrderUseCase
+import com.servicein.domain.usecase.GetShopsUseCase
+import com.servicein.domain.usecase.ManageAccountUseCase
+import com.servicein.domain.usecase.ManagePreferencesUseCase
+import com.servicein.domain.usecase.ManageWalletUseCase
 import com.servicein.ui.navigation.Screen
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
 class HomeViewModel @Inject constructor (
-    private val shopRepository: ShopRepository,
-    private val appPreferencesManager: AppPreferencesManager,
-    private val customerRepository: CustomerRepository,
-    private val orderRepository: OrderRepository,
-    private val accountService: FirebaseAccountService
+    private val managePreferencesUseCase: ManagePreferencesUseCase,
+    private val getCustomerUseCase: GetCustomerUseCase,
+    private val manageWalletUseCase: ManageWalletUseCase,
+    private val getShopsUseCase: GetShopsUseCase,
+    private val getOrderUseCase: GetOrderUseCase,
+    private val manageAccountUseCase: ManageAccountUseCase,
 ): ViewModel() {
     private val _isShopLoading = MutableStateFlow(false)
     val isShopLoading: StateFlow<Boolean> = _isShopLoading.asStateFlow()
@@ -65,13 +67,11 @@ class HomeViewModel @Inject constructor (
     private val _customer = MutableStateFlow<Customer?>(null)
     val customer: StateFlow<Customer?> = _customer.asStateFlow()
 
-    private var activeOrderListenerRegistration: ListenerRegistration? = null
-
     fun logout(routeAndPopUp: (String, String) -> Unit) {
         _isUserDataLoading.value = true
         viewModelScope.launch {
-            accountService.signOut()
-            appPreferencesManager.clearAll()
+            manageAccountUseCase.signOut()
+            managePreferencesUseCase.clearAllPreferences()
             _customer.value = null
             _isUserDataLoading.value = false
             routeAndPopUp(Screen.SplashScreen.route, Screen.Home.route)
@@ -81,8 +81,8 @@ class HomeViewModel @Inject constructor (
     fun getCustomerData() {
         _isUserDataLoading.value = true
         viewModelScope.launch {
-            val id = appPreferencesManager.customerId.first()
-            customerRepository.getCustomerById(id).fold(
+            val id = managePreferencesUseCase.customerId.first()
+            getCustomerUseCase(id).fold(
                 onSuccess = {
                     _customer.value = it
                     _isUserDataLoading.value = false
@@ -99,8 +99,8 @@ class HomeViewModel @Inject constructor (
     fun topUpWallet(amount: Int) {
         _isUserDataLoading.value = true
         viewModelScope.launch {
-            val shopId = appPreferencesManager.customerId.first()
-            customerRepository.addToWallet(shopId, amount).fold(
+            val shopId = managePreferencesUseCase.customerId.first()
+            manageWalletUseCase.add(shopId, amount).fold(
                 onSuccess = {
                     getCustomerData()
                     _isUserDataLoading.value = false
@@ -116,22 +116,20 @@ class HomeViewModel @Inject constructor (
 
     fun getActiveOrder() {
         _isShopLoading.value = true
-        activeOrderListenerRegistration?.remove()
         viewModelScope.launch {
-            activeOrderListenerRegistration = orderRepository.listenToOrdersByCustomerId(
-                appPreferencesManager.customerId.first(),
-                listOf(OrderStatus.RECEIVED, OrderStatus.ACCEPTED, OrderStatus.FINISHED),
-                onOrdersChanged = {
-                    _activeOrder.value = it
+            getOrderUseCase.listenActiveOrder(
+                customerId = managePreferencesUseCase.customerId.first()
+            ).onEach { result ->
+                result.onSuccess { activeOrders ->
+                    _activeOrder.value = activeOrders
+                    Log.d("HomeViewModel", "Active Order : $activeOrders")
                     _isShopLoading.value = false
-                    Log.d("HomeViewModel", "Active Orders: $it")
-                },
-                onError = {
-                    Log.e("HomeViewModel", "Error listening to active orders", it)
+                }.onFailure {
+                    Log.e("HomeViewModel", "Error fetching active order", it)
                     _activeOrder.value = emptyList()
                     _isShopLoading.value = false
                 }
-            )
+            }.collect()
         }
     }
 
@@ -155,7 +153,7 @@ class HomeViewModel @Inject constructor (
     fun getShopsData() {
         _isShopLoading.value = true
         viewModelScope.launch {
-            shopRepository.getAllShops().fold(
+            getShopsUseCase().fold(
                 onSuccess = {
                     _nearestShop.value = it
                     getRecommendedShops()
@@ -213,10 +211,5 @@ class HomeViewModel @Inject constructor (
                     _userLocation.value = latLng
                 }
             }
-    }
-
-    override fun onCleared() {
-        activeOrderListenerRegistration?.remove()
-        super.onCleared()
     }
 }

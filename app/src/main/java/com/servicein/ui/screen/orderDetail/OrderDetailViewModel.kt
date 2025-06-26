@@ -10,27 +10,31 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.maps.model.LatLng
-import com.google.firebase.firestore.ListenerRegistration
 import com.servicein.BuildConfig
-import com.servicein.data.repository.ChatRepository
-import com.servicein.data.repository.OrderRepository
-import com.servicein.data.repository.ShopRepository
 import com.servicein.data.service.RouteService
 import com.servicein.domain.model.Order
 import com.servicein.domain.model.Shop
+import com.servicein.domain.usecase.ChangeOrderStatusUseCase
+import com.servicein.domain.usecase.GetOrderUseCase
+import com.servicein.domain.usecase.GetShopsUseCase
+import com.servicein.domain.usecase.ManageChatUseCase
+import com.servicein.domain.usecase.ManageWalletUseCase
 import com.servicein.ui.navigation.Screen
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
 class OrderDetailViewModel @Inject constructor(
-    private val orderRepository: OrderRepository,
-    private val shopRepository: ShopRepository,
-    private val chatRepository: ChatRepository
+    private val getOrderUseCase: GetOrderUseCase,
+    private val changeOrderStatusUseCase: ChangeOrderStatusUseCase,
+    private val getShopsUseCase: GetShopsUseCase,
+    private val manageWalletUseCase: ManageWalletUseCase,
+    private val manageChatUseCase: ManageChatUseCase,
 ) : ViewModel() {
     private val _order = MutableStateFlow<Order?>(null)
     val order: StateFlow<Order?> = _order.asStateFlow()
@@ -50,8 +54,6 @@ class OrderDetailViewModel @Inject constructor(
     private val _routePolyline = MutableStateFlow<List<LatLng>>(emptyList())
     val routePolyline: StateFlow<List<LatLng>> = _routePolyline.asStateFlow()
 
-    private var orderListener: ListenerRegistration? = null
-
     fun markOrderFinished(
         orderId: String,
         rating: Int,
@@ -61,13 +63,13 @@ class OrderDetailViewModel @Inject constructor(
         _isShopDataLoading.value = true
         Log.i("OrderDetailViewModel", "SelectedRating: $rating")
         viewModelScope.launch {
-            orderRepository.completeOrder(orderId, rating, review).fold(
+            changeOrderStatusUseCase.completeOrder(orderId, rating, review).fold(
                 onSuccess = {
                     Log.d("OrderDetailViewModel", "Order marked as finished")
-                    shopRepository.addToWallet(_order.value!!.shopId, _order.value!!.value).fold(
+                    manageWalletUseCase.add(_order.value!!.shopId, _order.value!!.value).fold(
                         onSuccess = {
                             Log.d("OrderDetailViewModel", "Wallet updated successfully")
-                            chatRepository.deleteChatByCustomerAndShop(
+                            manageChatUseCase.deleteChat(
                                 _order.value!!.customerId, _order.value!!.shopId
                             ).fold(
                                 onSuccess = {
@@ -99,7 +101,7 @@ class OrderDetailViewModel @Inject constructor(
     private fun getShopData(shopId: String) {
         _isShopDataLoading.value = true
         viewModelScope.launch {
-            shopRepository.getShopById(shopId).fold(
+            getShopsUseCase(shopId).fold(
                 onSuccess = { shop ->
                     _shop.value = shop
                     _isShopDataLoading.value = false
@@ -116,25 +118,19 @@ class OrderDetailViewModel @Inject constructor(
 
     fun getOrderData(orderId: String) {
         _isShopDataLoading.value = true
-        orderListener?.remove()
         viewModelScope.launch {
-            orderListener = orderRepository.listenToOrderById(
-                orderId,
-                onResult = { result ->
-                    result.fold(
-                        onSuccess = { order ->
-                            _order.value = order
-                            getShopData(order?.shopId ?: "")
-                            Log.d("OrderDetailViewModel", "Order: $order")
-                        },
-                        onFailure = {
-                            _order.value = null
-                            _isShopDataLoading.value = false
-                            Log.d("OrderDetailViewModel", "Error: ${it.message}")
-                        }
-                    )
+            getOrderUseCase.listenToOrderById(orderId)
+                .onEach { result ->
+                    result.onSuccess { order ->
+                        Log.d("OrderDetailViewModel", "Order: $order")
+                        _order.value = order
+                        getShopData(order?.shopId ?: "")
+                    }.onFailure {
+                        Log.d("OrderDetailViewModel", "Error getting order list: ${it.message}")
+                        _order.value = null
+                        _isShopDataLoading.value = false
+                    }
                 }
-            )
         }
     }
 
@@ -189,10 +185,5 @@ class OrderDetailViewModel @Inject constructor(
 
     fun setPermissionGranted(granted: Boolean) {
         _hasLocationPermission.value = granted
-    }
-
-    override fun onCleared() {
-        orderListener?.remove()
-        super.onCleared()
     }
 }

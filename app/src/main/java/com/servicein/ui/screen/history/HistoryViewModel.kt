@@ -3,10 +3,9 @@ package com.servicein.ui.screen.history
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.servicein.core.util.OrderStatus
-import com.servicein.data.repository.OrderRepository
 import com.servicein.domain.model.Order
-import com.servicein.domain.preference.AppPreferencesManager
+import com.servicein.domain.usecase.GetOrderUseCase
+import com.servicein.domain.usecase.ManagePreferencesUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -16,8 +15,8 @@ import javax.inject.Inject
 
 @HiltViewModel
 class HistoryViewModel @Inject constructor (
-    private val orderRepository: OrderRepository,
-    private val appPreferencesManager: AppPreferencesManager,
+    private val getOrderUseCase: GetOrderUseCase,
+    private val preferencesUseCase: ManagePreferencesUseCase,
 ): ViewModel() {
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading
@@ -36,9 +35,8 @@ class HistoryViewModel @Inject constructor (
     fun getHistoryList() {
         _isLoading.value = true
         viewModelScope.launch {
-            orderRepository.getOrdersByCustomerIdAndStatus(
-                appPreferencesManager.customerId.first(),
-                listOf(OrderStatus.COMPLETED, OrderStatus.REJECTED)
+            getOrderUseCase.getOrderHistory(
+                preferencesUseCase.customerId.first(),
             ).fold(
                 onSuccess = {
                     _historyList.value = it

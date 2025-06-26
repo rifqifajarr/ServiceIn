@@ -13,9 +13,9 @@ import com.google.android.libraries.identity.googleid.GetGoogleIdOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import com.google.android.libraries.identity.googleid.GoogleIdTokenParsingException
 import com.servicein.R
-import com.servicein.data.repository.CustomerRepository
-import com.servicein.domain.preference.AppPreferencesManager
-import com.servicein.domain.usecase.AccountService
+import com.servicein.domain.usecase.CreateCustomerUseCase
+import com.servicein.domain.usecase.ManageAccountUseCase
+import com.servicein.domain.usecase.ManagePreferencesUseCase
 import com.servicein.ui.navigation.Screen
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -26,9 +26,9 @@ import javax.inject.Inject
 
 @HiltViewModel
 class LoginViewModel @Inject constructor(
-    private val accountService: AccountService,
-    private val appPreferenceManager: AppPreferencesManager,
-    private val customerRepository: CustomerRepository
+    private val manageAccountUseCase: ManageAccountUseCase,
+    private val preferencesUseCase: ManagePreferencesUseCase,
+    private val createCustomerUseCase: CreateCustomerUseCase,
 ): ViewModel() {
     data class LoginUiState(
         val isLoading: Boolean = false,
@@ -80,14 +80,14 @@ class LoginViewModel @Inject constructor(
                         try {
                             val googleIdTokenCredential =
                                 GoogleIdTokenCredential.createFrom(credential.data)
-                            accountService.signInWithGoogle(googleIdTokenCredential.idToken).fold(
+                            manageAccountUseCase.signIn(googleIdTokenCredential.idToken).fold(
                                 onSuccess = { result ->
                                     if (result.uid != null && result.displayName != null) {
                                         Log.i("LoginViewModel", "signInWithGoogle: $result")
-                                        customerRepository.createCustomer(result.uid, result.displayName).fold(
+                                        createCustomerUseCase(result.uid, result.displayName).fold(
                                             onSuccess = {
-                                                appPreferenceManager.setCustomerId(result.uid)
-                                                appPreferenceManager.setCustomerName(result.displayName)
+                                                preferencesUseCase.setCustomerId(result.uid)
+                                                preferencesUseCase.setCustomerName(result.displayName)
                                                 _uiState.value = _uiState.value.copy(
                                                     isLoading = false,
                                                     isSignedIn = true,

@@ -1,14 +1,15 @@
-package com.servicein
+package com.servicein.presentation
 
 import android.location.Location
 import android.util.Log
 import com.google.android.gms.maps.model.LatLng
 import com.servicein.core.util.OrderType
-import com.servicein.data.repository.CustomerRepository
-import com.servicein.data.repository.ShopRepository
 import com.servicein.domain.model.Shop
-import com.servicein.domain.preference.AppPreferencesManager
 import com.servicein.domain.usecase.CreateOrderUseCase
+import com.servicein.domain.usecase.GetCustomerUseCase
+import com.servicein.domain.usecase.GetShopsUseCase
+import com.servicein.domain.usecase.ManagePreferencesUseCase
+import com.servicein.domain.usecase.ManageWalletUseCase
 import com.servicein.ui.navigation.Screen
 import com.servicein.ui.screen.order.OrderViewModel
 import io.mockk.coEvery
@@ -35,9 +36,10 @@ import java.time.LocalDateTime
 class OrderViewModelTest {
 
     private val mockCreateOrderUseCase: CreateOrderUseCase = mockk()
-    private val mockAppPreferencesManager: AppPreferencesManager = mockk()
-    private val mockShopRepository: ShopRepository = mockk()
-    private val mockCustomerRepository: CustomerRepository = mockk()
+    private val mockGetCustomerUseCase: GetCustomerUseCase = mockk()
+    private val mockGetShopsUseCase: GetShopsUseCase = mockk()
+    private val mockAppPreferencesManager: ManagePreferencesUseCase = mockk()
+    private val mockManageWalletUseCase: ManageWalletUseCase = mockk()
 
     private val testDispatcher = StandardTestDispatcher()
 
@@ -48,10 +50,11 @@ class OrderViewModelTest {
         Dispatchers.setMain(testDispatcher)
 
         orderViewModel = OrderViewModel(
-            mockShopRepository,
+            mockGetShopsUseCase,
             mockAppPreferencesManager,
-            mockCustomerRepository,
-            mockCreateOrderUseCase
+            mockGetCustomerUseCase,
+            mockManageWalletUseCase,
+            mockCreateOrderUseCase,
         )
 
         coEvery { mockAppPreferencesManager.customerId } returns flowOf("customer123")
@@ -98,7 +101,7 @@ class OrderViewModelTest {
 
         val newBalanceAfterDeduction = 50_000
         coEvery {
-            mockCustomerRepository.deductFromWallet(customerId, value)
+            mockManageWalletUseCase.deduct(customerId, value)
         } returns Result.success(newBalanceAfterDeduction)
 
         var routeCalled: String? = null
@@ -127,7 +130,7 @@ class OrderViewModelTest {
                 value = value
             )
         }
-        coVerify(exactly = 1) { mockCustomerRepository.deductFromWallet(customerId, value) }
+        coVerify(exactly = 1) { mockManageWalletUseCase.deduct(customerId, value) }
     }
 
     @Test
@@ -171,7 +174,7 @@ class OrderViewModelTest {
 
         coEvery { mockCreateOrderUseCase(any(), any(), any(), any(), any(), any(), any(), any(), any()) } returns Result.success(Unit)
         val expectedException = Exception("Wallet deduction failed")
-        coEvery { mockCustomerRepository.deductFromWallet(customerId, value) } returns Result.failure(expectedException)
+        coEvery { mockManageWalletUseCase.deduct(customerId, value) } returns Result.failure(expectedException)
 
         var routeCalled: String? = null
         val mockRouteAndPopUp: (String, String) -> Unit = { route, _ -> routeCalled = route }
@@ -183,6 +186,6 @@ class OrderViewModelTest {
 
         coVerify(exactly = 1) { mockCreateOrderUseCase(any(), any(), any(), any(), any(), any(), any(), any(), any()) }
 
-        coVerify(exactly = 1) { mockCustomerRepository.deductFromWallet(customerId, value) }
+        coVerify(exactly = 1) { mockManageWalletUseCase.deduct(customerId, value) }
     }
 }

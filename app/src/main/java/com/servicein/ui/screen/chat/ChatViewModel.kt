@@ -3,9 +3,9 @@ package com.servicein.ui.screen.chat
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.servicein.data.repository.ChatRepository
 import com.servicein.domain.model.Chat
-import com.servicein.domain.preference.AppPreferencesManager
+import com.servicein.domain.usecase.ManageChatUseCase
+import com.servicein.domain.usecase.ManagePreferencesUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -16,8 +16,8 @@ import javax.inject.Inject
 
 @HiltViewModel
 class ChatViewModel @Inject constructor(
-    private val chatRepository: ChatRepository,
-    private val appPreferenceManager: AppPreferencesManager,
+    private val chatUseCase: ManageChatUseCase,
+    private val preferencesUseCase: ManagePreferencesUseCase,
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(ChatUiState())
     val uiState: StateFlow<ChatUiState> = _uiState.asStateFlow()
@@ -31,9 +31,9 @@ class ChatViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true)
 
-            val customerId = appPreferenceManager.customerId.first()
-            val customerName = appPreferenceManager.customerName.first()
-            chatRepository.createOrGetChat(shopId, customerId, shopName, customerName)
+            val customerId = preferencesUseCase.customerId.first()
+            val customerName = preferencesUseCase.customerName.first()
+            chatUseCase.createOrGetChat(shopId, customerId, shopName, customerName)
                 .onSuccess { chatId ->
                     currentChatId = chatId
                     observeChat(chatId)
@@ -49,7 +49,7 @@ class ChatViewModel @Inject constructor(
 
     private fun observeChat(chatId: String) {
         viewModelScope.launch {
-            chatRepository.getChatMessages(chatId).collect { chat ->
+            chatUseCase.observeChat(chatId).collect { chat ->
                 Log.d("ChatViewModel", "Received chat: ${chat?.id}, messages count: ${chat?.messages?.size}")
 
                 if (chat != null) {
@@ -93,7 +93,7 @@ class ChatViewModel @Inject constructor(
         val message = _messageText.value.trim()
         if (message.isNotEmpty() && currentChatId.isNotEmpty()) {
             viewModelScope.launch {
-                chatRepository.sendMessage(
+                chatUseCase.sendMessage(
                     chatId = currentChatId,
                     message = message,
                 ).onSuccess {
@@ -103,6 +103,10 @@ class ChatViewModel @Inject constructor(
                 }
             }
         }
+    }
+
+    fun setChatId(chatId: String) {
+        currentChatId = chatId
     }
 }
 

@@ -14,13 +14,14 @@ import com.servicein.BuildConfig
 import com.servicein.core.util.LocationPermissionHandler
 import com.servicein.core.util.MapUtil
 import com.servicein.core.util.OrderType
-import com.servicein.data.repository.CustomerRepository
-import com.servicein.data.repository.ShopRepository
 import com.servicein.data.service.RouteService
 import com.servicein.domain.model.Customer
 import com.servicein.domain.model.Shop
-import com.servicein.domain.preference.AppPreferencesManager
 import com.servicein.domain.usecase.CreateOrderUseCase
+import com.servicein.domain.usecase.GetCustomerUseCase
+import com.servicein.domain.usecase.GetShopsUseCase
+import com.servicein.domain.usecase.ManagePreferencesUseCase
+import com.servicein.domain.usecase.ManageWalletUseCase
 import com.servicein.ui.navigation.Screen
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -33,9 +34,10 @@ import javax.inject.Inject
 
 @HiltViewModel
 class OrderViewModel @Inject constructor(
-    private val shopRepository: ShopRepository,
-    private val appPreferencesManager: AppPreferencesManager,
-    private val customerRepository: CustomerRepository,
+    private val getShopsUseCase: GetShopsUseCase,
+    private val preferencesUseCase: ManagePreferencesUseCase,
+    private val getCustomerUseCase: GetCustomerUseCase,
+    private val manageWalletUseCase: ManageWalletUseCase,
     private val createOrderUseCase: CreateOrderUseCase
 ) : ViewModel(), LocationPermissionHandler {
     private val _isSearchingShop = MutableStateFlow(false)
@@ -71,7 +73,7 @@ class OrderViewModel @Inject constructor(
     fun getCustomerData() {
         _isSearchingShop.value = true
         viewModelScope.launch {
-            customerRepository.getCustomerById(appPreferencesManager.customerId.first()).fold(
+            getCustomerUseCase(preferencesUseCase.customerId.first()).fold(
                 onSuccess = {
                     _customer.value = it
                     _isSearchingShop.value = false
@@ -87,9 +89,10 @@ class OrderViewModel @Inject constructor(
     fun createOrder(value: Int, routeAndPopUp: (String, String) -> Unit) {
         _isSearchingShop.value = true
         viewModelScope.launch {
+            val customerId = preferencesUseCase.customerId.first()
             createOrderUseCase(
-                customerName = appPreferencesManager.customerName.first(),
-                customerId = appPreferencesManager.customerId.first(),
+                customerName = preferencesUseCase.customerName.first(),
+                customerId = customerId,
                 shopId = _selectedShop.value!!.id,
                 shopName = _selectedShop.value!!.shopName,
                 orderType = selectedOrderType.value!!,
@@ -99,8 +102,8 @@ class OrderViewModel @Inject constructor(
                 longitude = selectedLocation.value!!.longitude
             ).fold(
                 onSuccess = {
-                    customerRepository.deductFromWallet(
-                        appPreferencesManager.customerId.first(),
+                    manageWalletUseCase.deduct(
+                        customerId,
                         value
                     ).fold(
                         onSuccess = {
@@ -134,7 +137,7 @@ class OrderViewModel @Inject constructor(
     fun getSelectedShopData(shopId: String) {
         _isSearchingShop.value = true
         viewModelScope.launch {
-            shopRepository.getShopById(shopId).fold(
+            getShopsUseCase(shopId).fold(
                 onSuccess = {
                     _selectedShop.value = it
                     _isSearchingShop.value = false
@@ -152,7 +155,7 @@ class OrderViewModel @Inject constructor(
         _isSearchingShop.value = true
         viewModelScope.launch {
             val shops: List<Shop>
-            shopRepository.getAllShops().fold(
+            getShopsUseCase().fold(
                 onSuccess = {
                     shops = it
                     val sorted = shops.sortedWith(

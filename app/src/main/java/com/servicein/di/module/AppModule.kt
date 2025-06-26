@@ -1,7 +1,8 @@
-package com.servicein.domain.module
+package com.servicein.di.module
 
 import android.content.Context
-import com.servicein.domain.preference.AppPreferencesManager
+import com.servicein.data.preference.AppPreferencesManager
+import com.servicein.domain.preferences.IAppPreferencesManager
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -14,7 +15,7 @@ import javax.inject.Singleton
 class AppModule {
     @Provides
     @Singleton
-    fun provideAppPreferencesManager(@ApplicationContext context: Context): AppPreferencesManager {
+    fun provideAppPreferencesManager(@ApplicationContext context: Context): IAppPreferencesManager {
         return AppPreferencesManager(context)
     }
 }

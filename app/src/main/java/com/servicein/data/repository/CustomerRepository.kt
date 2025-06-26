@@ -3,6 +3,7 @@ package com.servicein.data.repository
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.toObject
 import com.servicein.domain.model.Customer
+import com.servicein.domain.repository.ICustomerRepository
 import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -10,10 +11,10 @@ import javax.inject.Singleton
 @Singleton
 class CustomerRepository @Inject constructor(
     private val firestore: FirebaseFirestore,
-) {
+) : ICustomerRepository {
     private val customerCollection = firestore.collection("customers")
 
-    suspend fun createCustomer(customerId: String, customerName: String): Result<Unit> {
+    override suspend fun createCustomer(customerId: String, customerName: String): Result<Unit> {
         return try {
             val docRef = customerCollection.document(customerId)
             val existingDoc = docRef.get().await()
@@ -40,7 +41,7 @@ class CustomerRepository @Inject constructor(
         }
     }
 
-    suspend fun getCustomerById(customerId: String): Result<Customer?> {
+    override suspend fun getCustomerById(customerId: String): Result<Customer?> {
         return try {
             val document = customerCollection.document(customerId).get().await()
             val customer = if (document.exists()) {
@@ -54,7 +55,7 @@ class CustomerRepository @Inject constructor(
         }
     }
 
-    suspend fun addToWallet(customerId: String, amount: Int): Result<Int> {
+    override suspend fun addToWallet(customerId: String, amount: Int): Result<Int> {
         return try {
             val newBalance = firestore.runTransaction { transaction ->
                 val docRef = customerCollection.document(customerId)
@@ -76,8 +77,7 @@ class CustomerRepository @Inject constructor(
         }
     }
 
-    // Deduct money from wallet (transaction-safe)
-    suspend fun deductFromWallet(customerId: String, amount: Int): Result<Int> {
+    override suspend fun deductFromWallet(customerId: String, amount: Int): Result<Int> {
         return try {
             val newBalance = firestore.runTransaction { transaction ->
                 val docRef = customerCollection.document(customerId)

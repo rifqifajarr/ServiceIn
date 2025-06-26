@@ -1,4 +1,4 @@
-package com.servicein.domain.module
+package com.servicein.di.module
 
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
