@@ -24,6 +24,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -117,6 +118,7 @@ class OrderDetailViewModel @Inject constructor(
     }
 
     fun getOrderData(orderId: String) {
+        Log.d("OrderDetailViewModel", "getOrderData dipanggil dengan orderId: $orderId")
         _isShopDataLoading.value = true
         viewModelScope.launch {
             getOrderUseCase.listenToOrderById(orderId)
@@ -130,7 +132,7 @@ class OrderDetailViewModel @Inject constructor(
                         _order.value = null
                         _isShopDataLoading.value = false
                     }
-                }
+                }.collect()
         }
     }
 
