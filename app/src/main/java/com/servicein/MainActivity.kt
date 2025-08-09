@@ -4,6 +4,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Surface
 import androidx.compose.material3.lightColorScheme
@@ -18,7 +19,9 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.google.android.libraries.places.api.Places
+import com.servicein.core.connectivity.ConnectivityManager
 import com.servicein.core.theme.ServiceInTheme
+import com.servicein.ui.component.GlobalDialogContainer
 import com.servicein.ui.navigation.Screen
 import com.servicein.ui.screen.chat.ChatView
 import com.servicein.ui.screen.orderDetail.OrderDetailView
@@ -34,9 +37,14 @@ import com.servicein.ui.screen.order.OrderTypeView
 import com.servicein.ui.screen.order.OrderViewModel
 import com.servicein.ui.screen.splashScreen.SplashScreenView
 import dagger.hilt.android.AndroidEntryPoint
+import javax.inject.Inject
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
+
+    @Inject
+    lateinit var connectivityManager: ConnectivityManager
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -51,12 +59,37 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = lightColorScheme().surface
                 ) {
-                    MyApp(
-                        navHostController = rememberNavController(),
-                    )
+                    Box {
+                        val orderId = intent.getStringExtra("orderId")
+                        val openOrderDetail = intent.getBooleanExtra("openOrderDetail", false)
+                        val navController = rememberNavController()
+
+                        if (openOrderDetail && orderId != null) {
+                            navController.navigate(Screen.OrderDetail.createRoute(orderId))
+                        } else {
+                            MyApp(
+                                navHostController = navController,
+                            )
+                        }
+
+                        GlobalDialogContainer(
+                            connectivityManager = connectivityManager,
+                            activity = this@MainActivity
+                        )
+                    }
                 }
             }
         }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        connectivityManager.startMonitoring()
+    }
+
+    override fun onPause() {
+        super.onPause()
+        connectivityManager.stopMonitoring()
     }
 }
 

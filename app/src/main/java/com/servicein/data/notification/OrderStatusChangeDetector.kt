@@ -1,7 +1,9 @@
 package com.servicein.data.notification
 
 import android.content.Context
+import android.content.Intent
 import android.util.Log
+import com.servicein.MainActivity
 import com.servicein.core.util.OrderStatus
 import com.servicein.core.util.Util
 import com.servicein.domain.model.Order
@@ -27,7 +29,11 @@ class OrderStatusChangeDetector @Inject constructor(
                 notificationService.showNotification(
                     title = "Pesanan Anda Telah Diterima",
                     message = "Pesanan Anda telah diterima oleh ${order.shopName}.",
-                    intent = null
+                    intent = Intent(context, MainActivity::class.java).apply {
+                        putExtra("orderId", order.id)
+                        putExtra("openOrderDetail", true)
+                        flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+                    }
                 )
 
                 val scheduleDateTime = LocalDateTime.parse(order.dateTime)

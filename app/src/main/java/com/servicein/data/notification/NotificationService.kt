@@ -10,10 +10,7 @@ import android.os.Build
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
-import com.servicein.MainActivity
 import com.servicein.R
-import com.servicein.core.util.Util
-import com.servicein.domain.model.Order
 import com.servicein.domain.notification.INotificationService
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.time.LocalDateTime
@@ -139,29 +136,6 @@ class NotificationService @Inject constructor(@ApplicationContext private val co
         } catch (e: Exception) {
             Result.failure(e)
         }
-    }
-
-    override fun showNewOrderNotification(order: Order) {
-        if (!checkNotificationPermission()) return
-
-        val title = "Pesanan Baru Diterima"
-        val message = buildString {
-            append(order.customerName)
-            append(
-                " - ${Util.formatDateTime(LocalDateTime.parse(order.dateTime))} - ${
-                    Util.formatRupiah(
-                        order.value
-                    )
-                }"
-            )
-        }
-
-        val intent = Intent(context, MainActivity::class.java).apply {
-            putExtra("orderId", order.id)
-            putExtra("openOrderDetail", true)
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
-        }
-        showNotification(title, message, intent)
     }
 
     override fun checkNotificationPermission(): Boolean {
