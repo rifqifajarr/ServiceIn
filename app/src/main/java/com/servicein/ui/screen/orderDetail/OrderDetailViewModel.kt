@@ -67,7 +67,7 @@ class OrderDetailViewModel @Inject constructor(
             changeOrderStatusUseCase.completeOrder(orderId, rating, review).fold(
                 onSuccess = {
                     Log.d("OrderDetailViewModel", "Order marked as finished")
-                    manageWalletUseCase.add(_order.value!!.shopId, _order.value!!.value).fold(
+                    manageWalletUseCase.pay(_order.value!!.shopId, _order.value!!.value).fold(
                         onSuccess = {
                             Log.d("OrderDetailViewModel", "Wallet updated successfully")
                             manageChatUseCase.deleteChat(

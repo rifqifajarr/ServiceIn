@@ -67,6 +67,15 @@ class OrderStatusChangeDetector @Inject constructor(
                 )
             }
 
+            if (previousStatus == OrderStatus.RECEIVED && currentStatus == OrderStatus.REJECTED) {
+                Log.d("OrderStatusChangeDetector", "Order finished: ${order.id}")
+                notificationService.showNotification(
+                    title = "Pesanan Anda Ditolak",
+                    message = "Tidak perlu bersedih hati, Coba buat layanan baru dari bengkel lain.",
+                    intent = null
+                )
+            }
+
             previousOrderStates[order.id] = currentStatus
         }
 
