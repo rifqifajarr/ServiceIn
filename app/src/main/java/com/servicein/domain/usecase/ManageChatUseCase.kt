@@ -1,12 +1,15 @@
 package com.servicein.domain.usecase
 
+import com.servicein.data.notification.ChatDetector
 import com.servicein.domain.model.Chat
 import com.servicein.domain.repository.IChatRepository
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.onEach
 import javax.inject.Inject
 
 class ManageChatUseCase @Inject constructor(
-    private val chatRepository: IChatRepository
+    private val chatRepository: IChatRepository,
+    private val chatDetector: ChatDetector
 ) {
     suspend fun createOrGetChat(
         shopId: String,
@@ -44,6 +47,10 @@ class ManageChatUseCase @Inject constructor(
         if (chatId.isBlank()) {
             throw IllegalArgumentException("Chat ID tidak boleh kosong.")
         }
-        return chatRepository.getChatMessages(chatId)
+        return chatRepository.getChatMessages(chatId).onEach { chat ->
+            if (chat != null) {
+                chatDetector.detectAndHandleNewChats(chatId, chat)
+            }
+        }
     }
 }
