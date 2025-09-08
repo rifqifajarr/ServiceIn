@@ -2,6 +2,10 @@
 
 An **Android-based mobile application** that provides **motorcycle home service** for maintenance and repair. Built with **Clean Architecture** to separate concerns, keeping the codebase clean, scalable, and easy to maintain.
 
+<p align="center">
+  <img src="Screenshots.png" alt="ServiceIn Screenshot" width="800">
+</p>
+
 ## Features
 
 - Customer & workshop registration and login
